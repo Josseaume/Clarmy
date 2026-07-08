@@ -5,6 +5,30 @@
 /* One vertical rhythm for the whole dashboard: every top-level section is a
    flex child, so inter-section spacing is a single consistent gap. */
 .mx-shell { padding: 24px 28px 64px; max-width: 1180px; margin: 0 auto; display: flex; flex-direction: column; gap: 20px; }
+
+/* Over-time series palette — validated categorical set (dataviz skill), fixed
+   CVD-safe order; never cycle or reassign by rank. Dark is the base (app is
+   dark-first), light overrides. Consumed as var(--mx-s-*) by chart + chips. */
+.mx-shell {
+  --mx-s-cost: #3987e5;
+  --mx-s-output: #199e70;
+  --mx-s-sessions: #c98500;
+  --mx-s-tools: #008300;
+  --mx-s-input: #9085e9;
+  --mx-s-cache-read: #e66767;
+  --mx-s-cache-create: #d55181;
+  --mx-s-messages: #d95926;
+}
+[data-theme='light'] .mx-shell {
+  --mx-s-cost: #2a78d6;
+  --mx-s-output: #1baf7a;
+  --mx-s-sessions: #eda100;
+  --mx-s-tools: #008300;
+  --mx-s-input: #4a3aa7;
+  --mx-s-cache-read: #e34948;
+  --mx-s-cache-create: #e87ba4;
+  --mx-s-messages: #eb6834;
+}
 .mx-header { display: flex; align-items: flex-start; justify-content: space-between; gap: 16px; }
 .mx-header h1 { font-size: 20px; font-weight: 600; letter-spacing: -0.01em; }
 .mx-header .sub { color: var(--fg-muted); font-size: 12px; margin-top: 4px; max-width: 640px; line-height: 1.5; }
@@ -146,11 +170,20 @@ rect.mx-hm-cell:hover { stroke: var(--fg); stroke-width: 1.5; }
 .mx-multi-tip .row .dot { width: 7px; height: 7px; border-radius: 2px; flex: 0 0 auto; }
 .mx-multi-tip .row .k { font-size: 10.5px; color: var(--fg-dim); min-width: 48px; }
 .mx-multi-tip .row .v { font-size: 11px; font-weight: 600; font-family: var(--font-mono); margin-left: auto; }
-/* Over-time chart legend: stays on one horizontal line. Its own class so the
-   donut legend's `.mx-legend` (flex column, below) can't override it. */
-.mx-legend-row { display: flex; flex-wrap: nowrap; gap: 12px; align-items: center; }
-.mx-legend-item { display: inline-flex; align-items: center; gap: 5px; white-space: nowrap; font-size: 11px; color: var(--fg-dim); font-family: var(--font-mono); }
-.mx-legend-dot { width: 9px; height: 9px; border-radius: 2px; display: inline-block; }
+/* Over-time variable picker — chips double as an interactive legend. --chip-c is
+   set inline per chip to its series color; active chips tint to it, ≥1 stays on. */
+.mx-metric-pick { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 14px; }
+.mx-metric-chip {
+  display: inline-flex; align-items: center; gap: 6px;
+  font-family: var(--font-mono); font-size: 10.5px; color: var(--fg-muted);
+  padding: 3px 9px; border: 1px solid var(--border); border-radius: 999px;
+  background: var(--bg); transition: color .15s, border-color .15s, background .15s;
+}
+.mx-metric-chip .dot { width: 8px; height: 8px; border-radius: 2px; background: var(--chip-c, var(--fg-faint)); opacity: 0.35; transition: opacity .15s; }
+.mx-metric-chip:hover { color: var(--fg-dim); border-color: var(--border-strong); }
+.mx-metric-chip.on { color: var(--fg); border-color: color-mix(in srgb, var(--chip-c) 55%, var(--border)); background: color-mix(in srgb, var(--chip-c) 12%, transparent); }
+.mx-metric-chip.on .dot { opacity: 1; }
+.mx-metric-chip:focus-visible { outline: 2px solid var(--chip-c); outline-offset: 1px; }
 
 /* ---- donuts ---- */
 .mx-donuts { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 12px; }

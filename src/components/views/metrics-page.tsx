@@ -1,10 +1,11 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState, type CSSProperties } from "react";
 import type { Filters, HeatMetric, MetricsPayload, RangeKey } from "./metrics/types.ts";
 import {
   buildSeries, computeDeltas, computeTotals, dataSpan, filterRows,
   perDay, perModel, perProject, perProvider, rangeStartMs, topSlices,
+  type SeriesMetric,
 } from "./metrics/aggregate.ts";
 import { fmtCost, fmtCostFull, fmtDay, fmtInt, fmtTokens } from "./metrics/format.ts";
 import { FilterBar } from "./metrics/filter-bar.tsx";
@@ -21,13 +22,21 @@ const HEAT_OPTS: { k: HeatMetric; label: string }[] = [
   { k: "cost", label: "cost" },
   { k: "output", label: "output" },
 ];
-// Over-time overlay: each curve uses a variant of the accent color. cost is the
-// base accent, output a lighter tint, sessions a darker shade.
-const SERIES_COLORS = {
-  cost: "var(--brand)",
-  output: "color-mix(in srgb, var(--brand) 46%, #ffffff)",
-  sessions: "color-mix(in srgb, var(--brand) 72%, #000000)",
-};
+// Variables the user can plot on the over-time chart. Colors are a validated
+// categorical palette (dataviz skill) exposed as CSS vars in metrics.css, in a
+// fixed CVD-safe order — never cycle or reassign by rank. The chart normalizes
+// each series to its own max, so mixing $ / tokens / counts stays comparable.
+interface SeriesDef { key: SeriesMetric; label: string; color: string; unit: string; format: (n: number) => string }
+const OVER_TIME_METRICS: SeriesDef[] = [
+  { key: "cost", label: "cost", color: "var(--mx-s-cost)", unit: "", format: fmtCost },
+  { key: "output", label: "output", color: "var(--mx-s-output)", unit: "tok", format: fmtTokens },
+  { key: "sessions", label: "sessions", color: "var(--mx-s-sessions)", unit: "", format: fmtInt },
+  { key: "toolUses", label: "tool calls", color: "var(--mx-s-tools)", unit: "", format: fmtInt },
+  { key: "input", label: "input", color: "var(--mx-s-input)", unit: "tok", format: fmtTokens },
+  { key: "cacheRead", label: "cache read", color: "var(--mx-s-cache-read)", unit: "tok", format: fmtTokens },
+  { key: "cacheCreate", label: "cache create", color: "var(--mx-s-cache-create)", unit: "tok", format: fmtTokens },
+  { key: "messages", label: "messages", color: "var(--mx-s-messages)", unit: "", format: fmtInt },
+];
 
 export function MetricsPage() {
   const [payload, setPayload] = useState<MetricsPayload | null>(null);
@@ -41,6 +50,7 @@ export function MetricsPage() {
   const metricsVersion = useCockpit((s) => s.metricsVersion);
   const [filters, setFilters] = useState<Filters>({ range: "all", providers: [], projects: [], models: [] });
   const [heatMetric, setHeatMetric] = useState<HeatMetric>("sessions");
+  const [overMetrics, setOverMetrics] = useState<SeriesMetric[]>(["cost"]);
 
   const refresh = async () => {
     setRefreshing(true);
@@ -78,13 +88,10 @@ export function MetricsPage() {
     const days = perDay(filtered);
     const span = dataSpan(rows);
     const from = rangeStartMs(filters.range, now) ?? span?.first ?? now;
-    const seriesCost = buildSeries(days, "cost", from, now);
-    const seriesOutput = buildSeries(days, "output", from, now);
-    const seriesSessions = buildSeries(days, "sessions", from, now);
     const costByProvider = topSlices(providers, 6, (g) => g.cost);
     const costByProject = topSlices(projects, 8, (g) => g.cost);
     const costByModel = topSlices(models, 8, (g) => g.cost);
-    return { filtered, totals, deltas, providers, projects, models, days, from, seriesCost, seriesOutput, seriesSessions, costByProvider, costByProject, costByModel, span };
+    return { filtered, totals, deltas, providers, projects, models, days, from, costByProvider, costByProject, costByModel, span };
   }, [rows, filters, now]);
 
   const allProviders = useMemo(() => perProvider(rows).map((g) => ({ key: g.key, label: g.label })), [rows]);
@@ -116,11 +123,19 @@ export function MetricsPage() {
   const toggleProvider = (id: string) =>
     setFilters((f) => ({ ...f, providers: f.providers.includes(id) ? f.providers.filter((x) => x !== id) : [...f.providers, id] }));
 
-  const overTime: ChartSeries[] = [
-    { key: "cost", label: "cost", color: SERIES_COLORS.cost, unit: "", format: fmtCost, points: view.seriesCost },
-    { key: "output", label: "output", color: SERIES_COLORS.output, unit: "tok", format: fmtTokens, points: view.seriesOutput },
-    { key: "sessions", label: "sessions", color: SERIES_COLORS.sessions, unit: "", format: fmtInt, points: view.seriesSessions },
-  ];
+  // Toggle a variable on the over-time chart; never let the last one turn off so
+  // the chart always has at least one series to draw.
+  const toggleOverMetric = (k: SeriesMetric) =>
+    setOverMetrics((cur) => cur.includes(k) ? (cur.length > 1 ? cur.filter((x) => x !== k) : cur) : [...cur, k]);
+
+  // A normalized series per toggled-on variable, in the registry's fixed order
+  // (colors stay bound to the variable, not to its rank in the selection).
+  const overTime: ChartSeries[] = useMemo(
+    () => OVER_TIME_METRICS
+      .filter((m) => overMetrics.includes(m.key))
+      .map((m) => ({ key: m.key, label: m.label, color: m.color, unit: m.unit, format: m.format, points: buildSeries(view.days, m.key, view.from, now) })),
+    [overMetrics, view.days, view.from, now],
+  );
 
   const provLabel = visibleProviders.length === 1 && visibleProviders[0]
     ? providerMeta(visibleProviders[0]).label
@@ -172,8 +187,9 @@ export function MetricsPage() {
           <section className="mx-card mx-wide">
             <div className="mx-card-h">
               <span>Over time</span>
-              <Legend items={overTime} />
+              <span className="mx-h-sub">pick one or more variables to plot</span>
             </div>
+            <MetricPicker defs={OVER_TIME_METRICS} active={overMetrics} onToggle={toggleOverMetric} />
             <MultiAreaChart series={overTime} />
           </section>
 
@@ -213,14 +229,26 @@ function Toggle<T extends string>({ opts, value, onChange }: { opts: { k: T; lab
   );
 }
 
-function Legend({ items }: { items: { key: string; label: string; color: string }[] }) {
+// Chips double as an interactive legend: each shows its series color, click to
+// add/remove it from the plot. Active chips tint to their own color; ≥1 stays on.
+function MetricPicker({ defs, active, onToggle }: { defs: SeriesDef[]; active: SeriesMetric[]; onToggle: (k: SeriesMetric) => void }) {
   return (
-    <div className="mx-legend-row">
-      {items.map((it) => (
-        <span key={it.key} className="mx-legend-item">
-          <span className="mx-legend-dot" style={{ background: it.color }} />{it.label}
-        </span>
-      ))}
+    <div className="mx-metric-pick" role="group" aria-label="Variables to plot over time">
+      {defs.map((d) => {
+        const on = active.includes(d.key);
+        return (
+          <button
+            key={d.key}
+            type="button"
+            className={`mx-metric-chip${on ? " on" : ""}`}
+            aria-pressed={on}
+            style={{ ["--chip-c" as string]: d.color } as CSSProperties}
+            onClick={() => onToggle(d.key)}
+          >
+            <span className="dot" />{d.label}
+          </button>
+        );
+      })}
     </div>
   );
 }

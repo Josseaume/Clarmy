@@ -85,4 +85,8 @@ export interface DayBucket {
   cost: number;
   output: number;
   toolUses: number;
+  input: number;
+  cacheRead: number;
+  cacheCreate: number;
+  messages: number;
 }

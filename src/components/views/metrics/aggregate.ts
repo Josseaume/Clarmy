@@ -137,7 +137,7 @@ export function perDay(rows: readonly SessionRow[]): Map<string, DayBucket> {
   const m = new Map<string, DayBucket>();
   const get = (d: string): DayBucket => {
     let b = m.get(d);
-    if (!b) { b = { sessions: 0, cost: 0, output: 0, toolUses: 0 }; m.set(d, b); }
+    if (!b) { b = { sessions: 0, cost: 0, output: 0, toolUses: 0, input: 0, cacheRead: 0, cacheCreate: 0, messages: 0 }; m.set(d, b); }
     return b;
   };
   for (const r of rows) {
@@ -148,11 +148,17 @@ export function perDay(rows: readonly SessionRow[]): Map<string, DayBucket> {
       b.cost += e.c;
       b.output += e.o;
     }
-    // A session and its tools count once, on the day it ended.
+    // A session and its tools count once, on the day it ended. Input/cache/
+    // messages have no per-message-day breakdown in `r.daily` (only cost/output
+    // do), so they land on the end day too — consistent with sessions/tools.
     if (r.day) {
       const b = get(r.day);
       b.sessions++;
       b.toolUses += r.toolUses;
+      b.input += r.input;
+      b.cacheRead += r.cacheRead;
+      b.cacheCreate += r.cacheCreate;
+      b.messages += r.messages;
     }
   }
   return m;
@@ -184,7 +190,7 @@ function shortLabel(key: string): string {
   return `${SHORT_MONTHS[mo]} ${d}`;
 }
 
-export type SeriesMetric = "cost" | "output" | "sessions" | "toolUses";
+export type SeriesMetric = "cost" | "output" | "sessions" | "toolUses" | "input" | "cacheRead" | "cacheCreate" | "messages";
 
 export interface SeriesPoint { t: number; label: string; value: number }
 
@@ -196,11 +202,8 @@ export function buildSeries(buckets: Map<string, import("./types.ts").DayBucket>
   const days: string[] = [];
   let cur = startKey;
   for (let i = 0; i < 800 && cur <= endKey; i++) { days.push(cur); cur = addDaysKey(cur, 1); }
-  const valueOf = (k: string): number => {
-    const b = buckets.get(k);
-    if (!b) return 0;
-    return metric === "cost" ? b.cost : metric === "output" ? b.output : metric === "sessions" ? b.sessions : b.toolUses;
-  };
+  // Every SeriesMetric name is a numeric DayBucket field, so index straight in.
+  const valueOf = (k: string): number => buckets.get(k)?.[metric] ?? 0;
   const weekly = days.length > 92;
   const points: SeriesPoint[] = [];
   if (!weekly) {
