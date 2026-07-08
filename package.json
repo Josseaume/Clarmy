@@ -13,6 +13,8 @@
     "test": "vitest run",
     "lint": "next lint",
     "postinstall": "node scripts/fix-node-pty-perms.mjs && node scripts/sync-phaser.mjs",
+    "gen:office-sprites": "python3 scripts/gen-agent-sprites.py",
+    "grok": "node --experimental-transform-types scripts/grok/cli.ts",
     "clarmy": "node bin/clarmy.mjs",
     "test:e2e": "playwright test",
     "office:gallery": "node scripts/serve-office-gallery.mjs",

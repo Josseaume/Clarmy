@@ -51,7 +51,12 @@ export function OfficeCanvas({
           pixelArt: true,
           roundPixels: true,
           transparent: true,
-          scale: { mode: Phaser.Scale.RESIZE, width: "100%", height: "100%" },
+          scale: {
+            mode: Phaser.Scale.FIT,
+            autoCenter: Phaser.Scale.CENTER_BOTH,
+            width: "100%",
+            height: "100%",
+          },
           scene,
           banner: false,
         });
@@ -83,7 +88,12 @@ export function OfficeCanvas({
         };
         document.addEventListener("visibilitychange", onVisibility);
 
+        const onResize = () => { game.scale.refresh(); };
+        const ro = new ResizeObserver(onResize);
+        ro.observe(host);
+
         teardownRef.current = () => {
+          ro.disconnect();
           document.removeEventListener("visibilitychange", onVisibility);
           unsub();
           game.events.off("select", onSelect);

@@ -620,7 +620,8 @@ kbd, code, .mono { font-family: var(--font-mono); font-feature-settings: 'zero',
 /* Pages that fill the viewport (tiles, focus) suppress main-scroll. */
 .main > .grid,
 .main > .focus-shell,
-.main > .compare-shell { height: 100%; }
+.main > .compare-shell,
+.main > .office-shell { height: 100%; }
 
 /* ============================================================
    Tiles
@@ -3750,8 +3751,37 @@ button[disabled], button[aria-disabled="true"] {
    ============================================================ */
 .office-shell { position: relative; display: flex; height: 100%; min-height: 0; overflow: hidden; background: var(--bg); }
 .office-main { position: relative; flex: 1; min-width: 0; }
-.office-canvas { position: absolute; inset: 0; }
-.office-canvas canvas { image-rendering: pixelated; }
+.office-canvas { position: absolute; inset: 0; display: grid; place-items: center; }
+.office-canvas canvas {
+  image-rendering: pixelated; image-rendering: crisp-edges;
+  max-width: 100%; max-height: 100%;
+}
+.office-preview {
+  position: fixed; inset: 0; z-index: 40; overflow: auto;
+  min-height: 100vh; padding: 24px; display: grid; gap: 20px; justify-items: center;
+  align-content: start; background: var(--bg); color: var(--fg); font-family: var(--font-mono);
+}
+.office-preview-head { text-align: center; }
+.office-preview-head h1 { font-size: 18px; margin: 0 0 6px; }
+.office-preview-head p { margin: 0; font-size: 12px; color: var(--fg-muted); }
+.office-preview-stage {
+  padding: 32px; min-height: 520px; display: grid; place-items: center;
+  background: #0a0a0a; border: 2px solid var(--border);
+  border-radius: 8px; box-shadow: 0 0 0 1px #1a1a1a inset;
+}
+.office-preview-canvas { image-rendering: pixelated; image-rendering: crisp-edges; display: block; }
+.office-preview-controls {
+  display: flex; flex-wrap: wrap; gap: 16px; align-items: center; font-size: 12px;
+}
+.office-preview-controls label { display: flex; gap: 8px; align-items: center; }
+.office-preview-compare {
+  display: flex; flex-wrap: wrap; gap: 24px; justify-content: center; align-items: flex-start; width: min(1200px, 100%);
+}
+.office-preview-ref { margin: 0; max-width: 280px; }
+.office-preview-ref-img { width: 100%; height: auto; border: 2px solid var(--border); border-radius: 6px; display: block; }
+.office-preview-grid { display: flex; gap: 20px; flex-wrap: wrap; justify-content: center; flex: 1; }
+.office-preview-thumb { margin: 0; text-align: center; font-size: 11px; color: var(--fg-muted); }
+.office-preview-thumb canvas { display: block; margin-top: 6px; image-rendering: pixelated; }
 .office-loading {
   position: absolute; inset: 0; display: grid; place-content: center; justify-items: center; gap: 6px;
   font-family: var(--font-mono); font-size: 12px; color: var(--fg-muted);

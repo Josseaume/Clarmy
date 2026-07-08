@@ -125,7 +125,7 @@ export function createOfficeScene(P: typeof import("phaser")) {
   // Labels: hidden when zoomed out (state dot remains), and never overlapping;
   // close neighbours get stacked vertical offsets.
   private layoutLabels(): void {
-    const visible = this.cameras.main.zoom >= 2.05;
+    const visible = this.cameras.main.zoom >= 1.8;
     const list = [...this.chars.values()].sort((a, b) => a.container.x - b.container.x);
     for (let i = 0; i < list.length; i += 1) {
       const ch = list[i]!;
@@ -314,8 +314,8 @@ export function createOfficeScene(P: typeof import("phaser")) {
     const cam = this.cameras.main;
     cam.setBounds(-TILE * 2, -TILE * 3, WORLD_W + TILE * 4, WORLD_H + TILE * 5);
     const fit = Math.min(cam.width / (WORLD_W + TILE * 2), cam.height / (WORLD_H + TILE * 4));
-    // bias toward closeness: personas are 16×32 and labels show from zoom 2.05
-    cam.setZoom(Math.max(2.4, Math.min(3.4, fit * 1.35)));
+    // Zoom in so HD personas (Grok 32×64) stay crisp and readable.
+    cam.setZoom(Math.max(3.8, Math.min(5.5, fit * 1.85)));
     cam.centerOn(WORLD_W / 2, WORLD_H / 2);
     this.input.on("pointermove", (p: PhaserNamespace.Input.Pointer) => {
       if (!p.isDown) return;
