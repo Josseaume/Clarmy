@@ -29,10 +29,12 @@ export function AreaChart({
   points,
   format,
   unit,
+  color = "var(--brand)",
 }: {
   points: readonly SeriesPoint[];
   format: (n: number) => string;
   unit: string;
+  color?: string;
 }) {
   const ref = useRef<HTMLDivElement | null>(null);
   const [w, setW] = useState(840);
@@ -77,8 +79,8 @@ export function AreaChart({
       <svg width={w} height={H} className="mx-area-svg" role="img" aria-label="Activity over time">
         <defs>
           <linearGradient id="mx-area-grad" x1="0" y1="0" x2="0" y2="1">
-            <stop offset="0%" stopColor="var(--brand)" stopOpacity="0.30" />
-            <stop offset="100%" stopColor="var(--brand)" stopOpacity="0" />
+            <stop offset="0%" stopColor={color} stopOpacity="0.30" />
+            <stop offset="100%" stopColor={color} stopOpacity="0" />
           </linearGradient>
         </defs>
         {gridVals.map((v, i) => (
@@ -88,12 +90,12 @@ export function AreaChart({
           </g>
         ))}
         <path d={area} fill="url(#mx-area-grad)" />
-        <path d={line} className="mx-area-line" fill="none" />
+        <path d={line} className="mx-area-line" fill="none" style={{ stroke: color }} />
         {points.map((p, i) => (i % labelEvery === 0 || i === n - 1) ? (
           <text key={p.t} x={x(i)} y={H - 8} className="mx-area-xlabel">{p.label}</text>
         ) : null)}
         {hp && <line x1={x(hi!)} x2={x(hi!)} y1={PAD_T} y2={PAD_T + PLOT_H} className="mx-area-cross" />}
-        {hp && <circle cx={x(hi!)} cy={y(hp.value)} r={3.5} className="mx-area-dot" />}
+        {hp && <circle cx={x(hi!)} cy={y(hp.value)} r={3.5} className="mx-area-dot" style={{ fill: color }} />}
       </svg>
       {hp && (
         <div className="mx-area-tip" style={{ left: x(hi!) }}>

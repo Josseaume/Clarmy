@@ -12,7 +12,7 @@ import { FilterBar } from "./metrics/filter-bar.tsx";
 import { StatGrid, type StatDef } from "./metrics/stat-cards.tsx";
 import { Heatmap } from "./metrics/heatmap.tsx";
 import { Donut } from "./metrics/donut.tsx";
-import { MultiAreaChart, type ChartSeries } from "./metrics/area-chart.tsx";
+import { AreaChart, MultiAreaChart, type ChartSeries } from "./metrics/area-chart.tsx";
 import { GroupTable } from "./metrics/tables.tsx";
 import { useCockpit } from "@/lib/client/store";
 import { providerMeta } from "@/lib/shared/providers";
@@ -136,6 +136,9 @@ export function MetricsPage() {
       .map((m) => ({ key: m.key, label: m.label, color: m.color, unit: m.unit, format: m.format, points: buildSeries(view.days, m.key, view.from, now) })),
     [overMetrics, view.days, view.from, now],
   );
+  // One variable → real-value axis (single-series chart); two or more → the
+  // normalized 0–100% overlay where each curve is scaled to its own max.
+  const soloSeries = overTime.length === 1 ? overTime[0] : undefined;
 
   const provLabel = visibleProviders.length === 1 && visibleProviders[0]
     ? providerMeta(visibleProviders[0]).label
@@ -190,7 +193,9 @@ export function MetricsPage() {
               <span className="mx-h-sub">pick one or more variables to plot</span>
             </div>
             <MetricPicker defs={OVER_TIME_METRICS} active={overMetrics} onToggle={toggleOverMetric} />
-            <MultiAreaChart series={overTime} />
+            {soloSeries
+              ? <AreaChart points={soloSeries.points} format={soloSeries.format} unit={soloSeries.unit} color={soloSeries.color} />
+              : <MultiAreaChart series={overTime} />}
           </section>
 
           <div className="mx-donuts">
