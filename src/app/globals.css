@@ -154,7 +154,14 @@ kbd, code, .mono { font-family: var(--font-mono); font-feature-settings: 'zero',
   letter-spacing: 0.04em;
   text-transform: lowercase;
 }
-.theme-toggle button.on { background: var(--bg-elev); color: var(--fg); }
+/* Active segment follows the RESOLVED html[data-theme] attribute (set by the
+   boot script pre-hydration, then by applyTweaks), so it is correct on first
+   paint without any client-side mounted gate. */
+html[data-theme='dark'] .theme-toggle .theme-opt-dark,
+html[data-theme='light'] .theme-toggle .theme-opt-light {
+  background: var(--bg-elev);
+  color: var(--fg);
+}
 
 /* Provider switch: pick which CLI vendor's sessions + metrics are in view. */
 .provider-tabs {
@@ -227,10 +234,10 @@ kbd, code, .mono { font-family: var(--font-mono); font-feature-settings: 'zero',
   transform: rotate(45deg);
 }
 .clawd { display: block; image-rendering: pixelated; image-rendering: crisp-edges; flex-shrink: 0; transition: filter .35s cubic-bezier(.2,.7,.2,1), transform .35s cubic-bezier(.3,1.35,.5,1); }
-.sidebar-head { transition: background .25s ease; }
 .sidebar-head:hover .clawd { filter: drop-shadow(0 0 8px color-mix(in srgb, var(--brand) 55%, transparent)); transform: translateY(-1px) rotate(-3deg); }
-.sidebar-head:hover .clarmy-text { color: color-mix(in srgb, var(--brand) 35%, var(--fg)); }
-.wordmark .clarmy-text { transition: color .25s ease; }
+/* Color transition only while hovered: keeps the hover ease without making the
+   wordmark lag behind the rest of the UI on a theme toggle. */
+.sidebar-head:hover .clarmy-text { color: color-mix(in srgb, var(--brand) 35%, var(--fg)); transition: color .25s ease; }
 .wordmark .clarmy-text {
   font-family: var(--font-mono, ui-monospace, monospace);
   font-weight: 700;

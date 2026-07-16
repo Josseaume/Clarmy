@@ -11,7 +11,7 @@ export function CommandPalette() {
   const setOpen = useCockpit((s) => s.setCmdkOpen);
   const sessions = useCockpit((s) => s.sessions);
   const order = useCockpit((s) => s.order);
-  const tweaks = useCockpit((s) => s.tweaks);
+  const resolvedTheme = useCockpit((s) => s.resolvedTheme);
   const setTweaks = useCockpit((s) => s.setTweaks);
   const router = useRouter();
 
@@ -23,7 +23,7 @@ export function CommandPalette() {
   if (!open) return null;
 
   const run = (fn: () => void) => { fn(); setOpen(false); };
-  const toggleTheme = () => setTweaks({ theme: tweaks.theme === "dark" ? "light" : "dark" });
+  const toggleTheme = () => setTweaks({ theme: resolvedTheme === "dark" ? "light" : "dark" });
 
   return (
     <div className="overlay" onClick={() => setOpen(false)} role="dialog" aria-label="Command palette">

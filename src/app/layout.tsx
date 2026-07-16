@@ -22,6 +22,26 @@ export const metadata: Metadata = {
   description: "Dashboard for piloting multiple Claude Code sessions via the Agent SDK.",
 };
 
+// Runs synchronously before first paint so light-theme users never see a dark
+// flash. Mirrors the store's theme resolution: read "cockpit.tweaks", honor the
+// legacy "cockpit:theme" key (folded into the store on hydration), resolve
+// "system" via matchMedia, and stamp the RESOLVED value on <html data-theme>.
+const themeBootScript = `(function () {
+  var theme = "dark";
+  try {
+    var pref = null;
+    try {
+      var raw = localStorage.getItem("cockpit.tweaks");
+      if (raw) pref = JSON.parse(raw).theme;
+    } catch (e) {}
+    var legacy = localStorage.getItem("cockpit:theme");
+    if (legacy === "dark" || legacy === "light" || legacy === "system") pref = legacy;
+    if (pref === "dark" || pref === "light") theme = pref;
+    else if (pref === "system") theme = matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light";
+  } catch (e) {}
+  try { document.documentElement.dataset.theme = theme; } catch (e) {}
+})();`;
+
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   const fontClasses = [
     inter.variable,
@@ -34,7 +54,10 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
   ].join(" ");
 
   return (
-    <html lang="en" data-theme="dark" suppressHydrationWarning className={fontClasses}>
+    <html lang="en" suppressHydrationWarning className={fontClasses}>
+      <head>
+        <script dangerouslySetInnerHTML={{ __html: themeBootScript }} />
+      </head>
       <body>
         <div className="app">
           <Sidebar />

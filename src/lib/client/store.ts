@@ -7,34 +7,14 @@ import { maybeNotifyTransition } from "./notify";
 import { coerceProviderId, DEFAULT_PROVIDER, PROVIDER_IDS, type ProviderId } from "../shared/providers";
 import {
   buildAccentTokens,
-  coerceMonoFontKey,
-  coerceUiFontKey,
   getMonoFontOption,
   getUiFontOption,
-  normalizeHexColor,
-  type MonoFontKey,
-  type UiFontKey,
+  resolveThemePreference,
+  type ThemeMode,
 } from "./theme-settings";
+import { DEFAULT_TWEAKS, loadTweaks, normalizeTweaks, persistTweaks, type Tweaks } from "./tweaks-storage";
 
-export interface Tweaks {
-  theme: "dark" | "light";
-  density: "compact" | "default" | "cozy";
-  cols: 2 | 3 | 4;
-  accent: string;
-  uiFont: UiFontKey;
-  monoFont: MonoFontKey;
-  tileVariant: "card" | "strip";
-}
-
-export const DEFAULT_TWEAKS: Tweaks = {
-  theme: "dark",
-  density: "default",
-  cols: 3,
-  accent: "#d97757",
-  uiFont: "inter",
-  monoFont: "jetbrains",
-  tileVariant: "card",
-};
+export { DEFAULT_TWEAKS, type Tweaks };
 
 interface CockpitState {
   sessions: Record<string, SessionSnapshot>;
@@ -44,6 +24,10 @@ interface CockpitState {
   cmdkOpen: boolean;
   approvalFor: SessionSnapshot | null;
   tweaks: Tweaks;
+  // Concrete theme currently applied to <html data-theme>. Derived from
+  // tweaks.theme by applyTweaks (and the OS listener when the preference is
+  // "system"). Consumers needing a real color mode read this, never tweaks.theme.
+  resolvedTheme: ThemeMode;
   // Active provider: the default for the New session form + the metrics view.
   // Always kept inside visibleProviders.
   provider: ProviderId;
@@ -68,6 +52,8 @@ interface CockpitState {
   setQuotas: (q: QuotasResponse) => void;
 }
 
+const initialTweaks = loadTweaks();
+
 export const useCockpit = create<CockpitState>((set, get) => ({
   sessions: {},
   order: [],
@@ -75,7 +61,8 @@ export const useCockpit = create<CockpitState>((set, get) => ({
   tweaksOpen: false,
   cmdkOpen: false,
   approvalFor: null,
-  tweaks: loadTweaks(),
+  tweaks: initialTweaks,
+  resolvedTheme: resolveThemePreference(initialTweaks.theme),
   provider: loadProvider(),
   visibleProviders: loadVisibleProviders(),
   metricsVersion: 0,
@@ -170,20 +157,6 @@ export const useCockpit = create<CockpitState>((set, get) => ({
   },
 }));
 
-function loadTweaks(): Tweaks {
-  if (typeof window === "undefined") return DEFAULT_TWEAKS;
-  try {
-    const raw = window.localStorage.getItem("cockpit.tweaks");
-    if (!raw) return DEFAULT_TWEAKS;
-    return normalizeTweaks(JSON.parse(raw) as unknown);
-  } catch { return DEFAULT_TWEAKS; }
-}
-
-function persistTweaks(t: Tweaks): void {
-  if (typeof window === "undefined") return;
-  window.localStorage.setItem("cockpit.tweaks", JSON.stringify(t));
-}
-
 const PROVIDER_KEY = "cockpit.provider";
 
 function loadProvider(): ProviderId {
@@ -217,11 +190,31 @@ function persistVisibleProviders(v: readonly ProviderId[]): void {
   try { window.localStorage.setItem(VISIBLE_KEY, JSON.stringify(v)); } catch { /* ignore */ }
 }
 
+// Listens for OS color-scheme changes so a "system" preference follows the OS
+// live. Bound once at module scope; events are ignored while the preference is
+// an explicit "dark"/"light".
+let systemThemeListenerBound = false;
+
+function ensureSystemThemeListener(): void {
+  if (systemThemeListenerBound) return;
+  if (typeof window === "undefined" || typeof window.matchMedia !== "function") return;
+  systemThemeListenerBound = true;
+  window.matchMedia("(prefers-color-scheme: dark)").addEventListener("change", () => {
+    const { tweaks } = useCockpit.getState();
+    if (tweaks.theme === "system") applyTweaks(tweaks);
+  });
+}
+
+// Single writer of <html data-theme> after boot (the inline script in
+// layout.tsx writes it once before hydration). The attribute always carries
+// the RESOLVED "dark" | "light" — never "system".
 export function applyTweaks(t: Tweaks): void {
   if (typeof document === "undefined") return;
+  const resolved = resolveThemePreference(t.theme);
+  if (t.theme === "system") ensureSystemThemeListener();
   const root = document.documentElement;
-  const accent = buildAccentTokens(t.accent, t.theme);
-  root.setAttribute("data-theme", t.theme);
+  const accent = buildAccentTokens(t.accent, resolved);
+  root.setAttribute("data-theme", resolved);
   root.setAttribute("data-density", t.density);
   root.setAttribute("data-ui-font", t.uiFont);
   root.setAttribute("data-mono-font", t.monoFont);
@@ -238,30 +231,7 @@ export function applyTweaks(t: Tweaks): void {
   root.style.setProperty("--accent-glow", accent.accentGlow);
   root.style.setProperty("--brand", accent.accent);
   root.style.setProperty("--brand-hover", accent.accentHover);
-}
-
-function normalizeTweaks(value: unknown): Tweaks {
-  if (!isRecord(value)) return DEFAULT_TWEAKS;
-  const theme = value.theme === "light" || value.theme === "dark" ? value.theme : DEFAULT_TWEAKS.theme;
-  const density =
-    value.density === "compact" || value.density === "default" || value.density === "cozy"
-      ? value.density
-      : DEFAULT_TWEAKS.density;
-  const cols = value.cols === 2 || value.cols === 3 || value.cols === 4 ? value.cols : DEFAULT_TWEAKS.cols;
-  const accent = typeof value.accent === "string" ? normalizeHexColor(value.accent) ?? DEFAULT_TWEAKS.accent : DEFAULT_TWEAKS.accent;
-  const tileVariant = value.tileVariant === "strip" || value.tileVariant === "card" ? value.tileVariant : DEFAULT_TWEAKS.tileVariant;
-
-  return {
-    theme,
-    density,
-    cols,
-    accent,
-    uiFont: coerceUiFontKey(value.uiFont),
-    monoFont: coerceMonoFontKey(value.monoFont),
-    tileVariant,
-  };
-}
-
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return typeof value === "object" && value !== null && !Array.isArray(value);
+  if (useCockpit.getState().resolvedTheme !== resolved) {
+    useCockpit.setState({ resolvedTheme: resolved });
+  }
 }

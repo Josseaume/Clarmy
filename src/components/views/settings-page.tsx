@@ -7,6 +7,8 @@ import { ToggleSwitch } from "@/components/ui/toggle-switch";
 import { Segmented } from "@/components/ui/segmented";
 import { MoonIcon, SunIcon, MonitorIcon, EyeIcon, EyeOffIcon } from "@/components/ui/icons";
 import { notificationsEnabled, setNotificationsEnabled } from "@/lib/client/notify";
+import { useCockpit } from "@/lib/client/store";
+import type { ThemePreference } from "@/lib/client/theme-settings";
 
 type Tab = "general" | "models" | "approvals" | "telemetry";
 
@@ -99,7 +101,15 @@ export function SettingsPage() {
   const [defaultModel, setDefaultModel] = useState<ModelId>(DEFAULT_MODEL_ID);
   const [defaultApproval, setDefaultApproval] = useState<ApprovalMode>("prompt");
   const [maxParallel, setMaxParallel] = useState(6);
-  const [theme, setTheme] = useState<"dark" | "light" | "system">("dark");
+  // Theme is owned by the cockpit store (single engine); this page only reads
+  // tweaks.theme and writes through setTweaks — no local state, no direct
+  // data-theme writes. `hydrated` avoids an SSR/client mismatch on the segment
+  // since the persisted preference is only known on the client.
+  const theme = useCockpit((s) => s.tweaks.theme);
+  const setTweaks = useCockpit((s) => s.setTweaks);
+  const [hydrated, setHydrated] = useState(false);
+  useEffect(() => { setHydrated(true); }, []);
+  const setTheme = (v: ThemePreference) => setTweaks({ theme: v });
   const [telemetry, setTelemetry] = useState(true);
   const [notifications, setNotifications] = useState(true);
   useEffect(() => { setNotifications(notificationsEnabled()); }, []);
@@ -108,23 +118,6 @@ export function SettingsPage() {
   const [dirty, setDirty] = useState(false);
   const [hoverTab, setHoverTab] = useState<Tab | null>(null);
   const [revealKey, setRevealKey] = useState(false);
-
-  useEffect(() => {
-    try {
-      const saved = localStorage.getItem("cockpit:theme");
-      if (saved === "dark" || saved === "light" || saved === "system") setTheme(saved);
-    } catch { /* ignore */ }
-  }, []);
-
-  useEffect(() => {
-    try { localStorage.setItem("cockpit:theme", theme); } catch { /* ignore */ }
-    if (typeof document !== "undefined") {
-      const resolved = theme === "system"
-        ? (window.matchMedia?.("(prefers-color-scheme: dark)").matches ? "dark" : "light")
-        : theme;
-      document.documentElement.dataset.theme = resolved;
-    }
-  }, [theme]);
 
   const mark = <T,>(set: (v: T) => void) => (v: T) => { set(v); setDirty(true); };
 
@@ -194,7 +187,7 @@ export function SettingsPage() {
                   <div className="v" style={rowStyle}>
                     <Segmented
                       ariaLabel="Theme"
-                      value={theme}
+                      value={hydrated ? theme : "dark"}
                       onChange={(v) => mark(setTheme)(v)}
                       options={[
                         { value: "dark",   label: <span style={{ display: "inline-flex", alignItems: "center", gap: 6 }}><MoonIcon /> Dark</span>,   title: "Dark theme" },
@@ -202,7 +195,7 @@ export function SettingsPage() {
                         { value: "system", label: <span style={{ display: "inline-flex", alignItems: "center", gap: 6 }}><MonitorIcon /> System</span>, title: "Follow system preference" },
                       ]}
                     />
-                    <div className="hint" style={{ marginTop: 8 }}>Saves to <code>localStorage</code> and sets <code>data-theme</code> on the root element.</div>
+                    <div className="hint" style={{ marginTop: 8 }}>Shared with the topbar toggle and tweaks panel. System follows your OS preference live.</div>
                   </div>
                 </div>
               </Section>

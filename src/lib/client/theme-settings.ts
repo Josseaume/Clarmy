@@ -1,6 +1,9 @@
 "use client";
 
 export type ThemeMode = "dark" | "light";
+// User-facing preference: "system" follows the OS via prefers-color-scheme.
+// The <html data-theme> attribute always carries the RESOLVED ThemeMode.
+export type ThemePreference = ThemeMode | "system";
 export type UiFontKey = "inter" | "geist" | "ibm-plex-sans" | "system";
 export type MonoFontKey = "jetbrains" | "geist-mono" | "ibm-plex-mono" | "system-mono";
 
@@ -121,6 +124,12 @@ export interface TerminalTheme {
   readonly brightMagenta: string;
   readonly brightCyan: string;
   readonly brightWhite: string;
+}
+
+export function resolveThemePreference(pref: ThemePreference): ThemeMode {
+  if (pref !== "system") return pref;
+  if (typeof window === "undefined" || typeof window.matchMedia !== "function") return "dark";
+  return window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light";
 }
 
 export function coerceUiFontKey(value: unknown): UiFontKey {

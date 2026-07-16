@@ -20,7 +20,10 @@ export function PtyTerminal({ sessionId, compact = false }: Props) {
   const wsRef = useRef<WebSocket | null>(null);
   const [status, setStatus] = useState<"connecting" | "open" | "closed" | "error">("connecting");
   const tweaks = useCockpit((s) => s.tweaks);
-  const terminalTheme = useMemo(() => getTerminalTheme(tweaks.theme, tweaks.accent), [tweaks.theme, tweaks.accent]);
+  // xterm needs a concrete "dark" | "light" — a "system" preference would
+  // otherwise break the terminal palette.
+  const resolvedTheme = useCockpit((s) => s.resolvedTheme);
+  const terminalTheme = useMemo(() => getTerminalTheme(resolvedTheme, tweaks.accent), [resolvedTheme, tweaks.accent]);
   const terminalFont = useMemo(() => getMonoFontOption(tweaks.monoFont).stack, [tweaks.monoFont]);
   const visualRef = useRef({ fontFamily: terminalFont, theme: terminalTheme });
   visualRef.current = { fontFamily: terminalFont, theme: terminalTheme };

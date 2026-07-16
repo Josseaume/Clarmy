@@ -107,6 +107,17 @@ export function OfficeCanvas({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  // Re-theme the running scene when the app theme toggles. <html data-theme>
+  // always carries the resolved "dark" | "light" value, never "system".
+  useEffect(() => {
+    const root = document.documentElement;
+    const observer = new MutationObserver(() => {
+      sceneRef.current?.applyTheme(root.dataset.theme === "light" ? "light" : "dark");
+    });
+    observer.observe(root, { attributes: true, attributeFilter: ["data-theme"] });
+    return () => observer.disconnect();
+  }, []);
+
   useEffect(() => { sceneRef.current?.setShowPrompts(showPrompts); }, [showPrompts]);
   useEffect(() => { sceneRef.current?.setSelected(selectedId); }, [selectedId]);
   useEffect(() => {

@@ -8,6 +8,9 @@ export function TweaksPanel() {
   const open = useCockpit((s) => s.tweaksOpen);
   const setOpen = useCockpit((s) => s.setTweaksOpen);
   const tweaks = useCockpit((s) => s.tweaks);
+  // Concrete value so one segment stays highlighted when the preference is
+  // "system" (only the settings page exposes the 3-way choice).
+  const resolvedTheme = useCockpit((s) => s.resolvedTheme);
   const setTweaks = useCockpit((s) => s.setTweaks);
   const accentValue = normalizeHexColor(tweaks.accent) ?? "#d97757";
   const [accentDraft, setAccentDraft] = useState(accentValue);
@@ -40,7 +43,7 @@ export function TweaksPanel() {
           <div className="lbl">Theme</div>
           <div className="seg">
             {(["dark", "light"] as const).map((v) => (
-              <button key={v} className={tweaks.theme === v ? "on" : ""} onClick={() => set("theme", v)}>{v}</button>
+              <button key={v} className={resolvedTheme === v ? "on" : ""} onClick={() => set("theme", v)}>{v}</button>
             ))}
           </div>
         </div>

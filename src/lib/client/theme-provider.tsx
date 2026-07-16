@@ -6,6 +6,7 @@ import { startWsClient } from "./ws-client";
 
 export function ThemeBootstrap(): null {
   const tweaks = useCockpit((s) => s.tweaks);
+  const resolvedTheme = useCockpit((s) => s.resolvedTheme);
   const setCmdkOpen = useCockpit((s) => s.setCmdkOpen);
   const setTweaks = useCockpit((s) => s.setTweaks);
 
@@ -25,12 +26,13 @@ export function ThemeBootstrap(): null {
         setCmdkOpen(true);
       } else if ((e.metaKey || e.ctrlKey) && e.shiftKey && e.key.toLowerCase() === "l") {
         e.preventDefault();
-        setTweaks({ theme: tweaks.theme === "dark" ? "light" : "dark" });
+        // Flip from the resolved theme so the shortcut also works under "system".
+        setTweaks({ theme: resolvedTheme === "dark" ? "light" : "dark" });
       }
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [tweaks.theme, setCmdkOpen, setTweaks]);
+  }, [resolvedTheme, setCmdkOpen, setTweaks]);
 
   return null;
 }
