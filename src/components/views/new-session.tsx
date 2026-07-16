@@ -4,7 +4,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { useEffect, useMemo, useRef, useState } from "react";
 import type { ApprovalMode, Effort, ModelId, ProviderId } from "@/lib/shared/types";
 import { defaultModelFor, effortLevelsFor, defaultEffortFor, modelBelongsToProvider } from "@/lib/shared/models";
-import { PROVIDERS, coerceProviderId } from "@/lib/shared/providers";
+import { DEFAULT_PROVIDER, PROVIDERS, coerceProviderId } from "@/lib/shared/providers";
 import { useCockpit } from "@/lib/client/store";
 import { ProjectSelector, type ProjectOption } from "./project-selector";
 import { ModelPicker } from "./model-picker";
@@ -36,22 +36,17 @@ export function NewSessionView() {
   const initialPrompt = search.get("prompt") ?? "";
   const autolaunch = search.get("autolaunch") === "1";
 
-  const storeProvider = useCockpit((s) => s.provider);
   const setStoreProvider = useCockpit((s) => s.setProvider);
-  const prefs = useMemo(() => loadPrefs(), []);
-  const initialProvider = coerceProviderId(prefs.provider ?? storeProvider);
-  const initialModel = prefs.model && modelBelongsToProvider(initialProvider, prefs.model)
-    ? prefs.model
-    : defaultModelFor(initialProvider);
-  const [provider, setProviderState] = useState<ProviderId>(initialProvider);
-  const [model, setModel] = useState<ModelId>(initialModel);
+  // Prefs live in localStorage, which the server can't read: SSR and the first
+  // client render must both show the defaults, so persisted prefs are applied
+  // in the post-mount effect below rather than in the initial state.
+  const [provider, setProviderState] = useState<ProviderId>(DEFAULT_PROVIDER);
+  const [model, setModel] = useState<ModelId>(() => defaultModelFor(DEFAULT_PROVIDER));
   const [effort, setEffort] = useState<Effort | null>(() => {
-    const levels = effortLevelsFor(initialModel);
-    if (levels.length === 0) return null;
-    const wanted = prefs.effort;
-    if (wanted && levels.includes(wanted)) return wanted;
-    return defaultEffortFor(initialModel);
+    const m = defaultModelFor(DEFAULT_PROVIDER);
+    return effortLevelsFor(m).length === 0 ? null : defaultEffortFor(m);
   });
+  const prefsHydrated = useRef(false);
 
   // Switching provider keeps the topbar in sync and snaps the model to one the
   // provider actually offers.
@@ -77,7 +72,7 @@ export function NewSessionView() {
   const [branch, setBranch] = useState("main");
   const [approval, setApproval] = useState<ApprovalMode>("prompt");
   const [autoMode, setAutoMode] = useState(false);
-  const [skipPerms, setSkipPerms] = useState(prefs.skipPerms ?? false);
+  const [skipPerms, setSkipPerms] = useState(false);
   const [prompt, setPrompt] = useState(initialPrompt);
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState<string | null>(null);
@@ -96,8 +91,26 @@ export function NewSessionView() {
   }, []);
 
   useEffect(() => {
+    // Declared before the hydration effect so the mount run is skipped and the
+    // pre-hydration defaults never overwrite the stored prefs.
+    if (!prefsHydrated.current) return;
     savePrefs({ provider, model, effort: effort ?? undefined, skipPerms });
   }, [provider, model, effort, skipPerms]);
+
+  useEffect(() => {
+    const prefs = loadPrefs();
+    const p = coerceProviderId(prefs.provider ?? useCockpit.getState().provider);
+    const m = prefs.model && modelBelongsToProvider(p, prefs.model)
+      ? prefs.model
+      : defaultModelFor(p);
+    setProviderState(p);
+    setModel(m);
+    const levels = effortLevelsFor(m);
+    const wanted = prefs.effort;
+    setEffort(levels.length === 0 ? null : wanted && levels.includes(wanted) ? wanted : defaultEffortFor(m));
+    setSkipPerms(prefs.skipPerms ?? false);
+    prefsHydrated.current = true;
+  }, []);
 
   useEffect(() => {
     void (async () => {
