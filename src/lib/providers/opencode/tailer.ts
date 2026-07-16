@@ -116,7 +116,7 @@ export class OpenCodeTailer implements LiveTailer {
     }
     if (!any) return;
     this.lastEmitted = patch;
-    log.info("opencode tailer emit", { cost: patch.cost, toolsUsed: patch.toolsUsed, tool: patch.tool });
+    log.debug("opencode tailer emit", { cost: patch.cost, toolsUsed: patch.toolsUsed, tool: patch.tool });
     this.onPatch(diff);
   }
 }

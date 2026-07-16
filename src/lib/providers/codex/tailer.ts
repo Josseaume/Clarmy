@@ -56,11 +56,15 @@ export class CodexTailer implements LiveTailer {
     let size = 0;
     try { size = statSync(this.file).size; } catch { this.file = null; return; }
     if (size <= this.offset) return;
-    const chunk = readFromOffset(this.file, this.offset);
-    if (!chunk) return;
-    const parts = chunk.split("\n");
-    const partial = parts.pop() ?? "";
-    this.offset += chunk.length - Buffer.byteLength(partial, "utf8");
+    const buf = readFromOffset(this.file, this.offset);
+    if (!buf || buf.length === 0) return;
+    // Consume whole lines only, counting bytes on the raw buffer so the offset
+    // never drifts on multi-byte characters or lands mid-character. The partial
+    // tail past the last newline is re-read on the next tick.
+    const lastNewline = buf.lastIndexOf(0x0a);
+    if (lastNewline < 0) return;
+    this.offset += lastNewline + 1;
+    const parts = buf.toString("utf8", 0, lastNewline).split("\n");
     let changed = false;
     for (const raw of parts) if (this.apply(raw)) changed = true;
     if (changed) this.emit();
@@ -129,7 +133,7 @@ export class CodexTailer implements LiveTailer {
     }
     if (!any) return;
     this.lastEmitted = patch;
-    log.info("codex tailer emit", { cost, toolsUsed: this.toolsUsed, tool: this.tool });
+    log.debug("codex tailer emit", { cost, toolsUsed: this.toolsUsed, tool: this.tool });
     this.onPatch(diff);
   }
 }
@@ -152,16 +156,16 @@ function headCwd(path: string): string | null {
   return null;
 }
 
-function readFromOffset(path: string, offset: number): string | null {
+function readFromOffset(path: string, offset: number): Buffer | null {
   let fd = -1;
   try {
     fd = openSync(path, "r");
     const st = statSync(path);
     const remaining = Math.max(0, st.size - offset);
-    if (remaining === 0) return "";
+    if (remaining === 0) return Buffer.alloc(0);
     const buf = Buffer.alloc(remaining);
-    readSync(fd, buf, 0, remaining, offset);
-    return buf.toString("utf8");
+    const read = readSync(fd, buf, 0, remaining, offset);
+    return buf.subarray(0, read);
   } catch { return null; }
   finally { if (fd >= 0) try { closeSync(fd); } catch { /* ignore */ } }
 }

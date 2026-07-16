@@ -1,7 +1,6 @@
-import { readdirSync, readFileSync, statSync, type Dirent } from "node:fs";
-import { resolve, join } from "node:path";
-import { homedir } from "node:os";
+import { readFileSync } from "node:fs";
 import { createLogger } from "../util/logger.ts";
+import { listRolloutFiles } from "../providers/codex/paths.ts";
 import type { ProviderQuota, QuotaWindow } from "../shared/quota.ts";
 
 const log = createLogger("quota/codex");
@@ -9,26 +8,6 @@ const log = createLogger("quota/codex");
 // Codex CLI persists the server-computed rate-limit gauge directly into each
 // session rollout JSONL as a `token_count` event. We read the latest non-null
 // reading instead of estimating: Codex already did the math.
-function codexHome(): string {
-  return process.env.CODEX_HOME || resolve(homedir(), ".codex");
-}
-
-interface FileEntry { readonly path: string; readonly mtime: number; }
-
-function collectSessionFiles(dir: string, out: FileEntry[], depth = 0): void {
-  if (depth > 5) return;
-  let entries: Dirent[];
-  try { entries = readdirSync(dir, { withFileTypes: true }); }
-  catch { return; }
-  for (const ent of entries) {
-    const full = join(dir, ent.name);
-    if (ent.isDirectory()) collectSessionFiles(full, out, depth + 1);
-    else if (ent.isFile() && ent.name.endsWith(".jsonl")) {
-      try { out.push({ path: full, mtime: statSync(full).mtimeMs }); }
-      catch { /* skip unreadable */ }
-    }
-  }
-}
 
 interface RateWindowRaw { used_percent?: unknown; window_minutes?: unknown; resets_at?: unknown; }
 interface RateLimitsRaw { primary?: RateWindowRaw | null; secondary?: RateWindowRaw | null; plan_type?: unknown; }
@@ -53,16 +32,10 @@ function toWindow(label: string, raw: RateWindowRaw | null | undefined, now: num
 // omits the Codex row entirely (not installed, no sessions, or no usage data yet)
 // rather than rendering a dead gauge.
 export function getCodexQuota(): ProviderQuota | null {
-  const home = codexHome();
-  const sessionsDir = join(home, "sessions");
-  try { if (!statSync(sessionsDir).isDirectory()) return null; }
-  catch { return null; }
-
-  const files: FileEntry[] = [];
-  collectSessionFiles(sessionsDir, files);
+  const files = listRolloutFiles();
   if (files.length === 0) return null;
 
-  const newest = files.sort((a, b) => b.mtime - a.mtime).slice(0, 12);
+  const newest = files.sort((a, b) => b.mtimeMs - a.mtimeMs).slice(0, 12);
   const now = Date.now();
 
   let bestTs = 0;
@@ -80,7 +53,7 @@ export function getCodexQuota(): ProviderQuota | null {
       if (rec.payload?.type !== "token_count" || !rl) continue;
       if (!rl.primary && !rl.secondary) continue;
       const ts = typeof rec.timestamp === "string" ? Date.parse(rec.timestamp) : NaN;
-      const tsMs = Number.isNaN(ts) ? f.mtime : ts;
+      const tsMs = Number.isNaN(ts) ? f.mtimeMs : ts;
       if (tsMs >= bestTs) { bestTs = tsMs; bestRate = rl; }
     }
   }

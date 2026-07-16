@@ -107,6 +107,7 @@ export class PtyRunner {
     let effortApplied = !this.effort || driver.effortInArgs(this.effort) || driver.effortSlash(this.effort) === null;
     let settleTimer: ReturnType<typeof setTimeout> | null = null;
     let fallbackTimer: ReturnType<typeof setTimeout> | null = null;
+    let promptTimer: ReturnType<typeof setTimeout> | null = null;
 
     const sendInitialPrompt = (): void => {
       if (promptSent) return;
@@ -115,6 +116,7 @@ export class PtyRunner {
       if (settleTimer) { clearTimeout(settleTimer); settleTimer = null; }
       if (fallbackTimer) { clearTimeout(fallbackTimer); fallbackTimer = null; }
       const writePrompt = (): void => {
+        if (this.exitCode !== null) return;
         // Bracketed paste so embedded newlines don't submit the prompt line-by-line.
         this.pty.write("\x1b[200~");
         this.pty.write(config.prompt);
@@ -125,7 +127,7 @@ export class PtyRunner {
       if (!effortApplied && slash) {
         effortApplied = true;
         this.pty.write(`${slash}\r`);
-        setTimeout(writePrompt, 250);
+        promptTimer = setTimeout(writePrompt, 250);
       } else {
         writePrompt();
       }
@@ -164,6 +166,7 @@ export class PtyRunner {
       if (this.idleTimer) { clearTimeout(this.idleTimer); this.idleTimer = null; }
       if (settleTimer) { clearTimeout(settleTimer); settleTimer = null; }
       if (fallbackTimer) { clearTimeout(fallbackTimer); fallbackTimer = null; }
+      if (promptTimer) { clearTimeout(promptTimer); promptTimer = null; }
       log.info("pty exit", { id, exitCode });
       const prevState = this.snapshot.state;
       this.snapshot = { ...this.snapshot, state: exitCode === 0 ? "done" : "error", endedAt: Date.now(), durationMs: Date.now() - this.snapshot.startedAt, error: exitCode !== 0 ? `exited with code ${exitCode}` : undefined };
