@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import { usePathname } from "next/navigation";
 import { useCockpit } from "@/lib/client/store";
-import { ClaudeIcon, CodexIcon, AntigravityIcon, GrokIcon, OpenCodeIcon, type ProviderIcon } from "./provider-icons";
+import { ClaudeIcon, CodexIcon, GrokIcon, OpenCodeIcon, type ProviderIcon } from "./provider-icons";
 import { PROVIDERS } from "@/lib/shared/providers";
 import type { ProviderId } from "@/lib/shared/types";
 
@@ -12,7 +12,6 @@ import type { ProviderId } from "@/lib/shared/types";
 const PROVIDER_ICON: Record<ProviderId, ProviderIcon> = {
   claude: ClaudeIcon,
   codex: CodexIcon,
-  gemini: AntigravityIcon,
   grok: GrokIcon,
   opencode: OpenCodeIcon,
 };
@@ -41,7 +40,6 @@ function fmtCost(n: number): string {
 export function Topbar() {
   const pathname = usePathname();
   const sessions = useCockpit((s) => s.sessions);
-  const tweaks = useCockpit((s) => s.tweaks);
   const setTweaks = useCockpit((s) => s.setTweaks);
   const setCmdkOpen = useCockpit((s) => s.setCmdkOpen);
   const visibleProviders = useCockpit((s) => s.visibleProviders);
@@ -116,9 +114,12 @@ export function Topbar() {
           <span>Search or run a command</span>
           <span className="kbd">⌘K</span>
         </button>
+        {/* Active segment is CSS-driven from html[data-theme] (see globals.css),
+            so it is correct on first paint — no mounted gate, no hydration
+            mismatch. Clicking always writes an explicit dark/light preference. */}
         <div className="theme-toggle" role="tablist">
-          <button suppressHydrationWarning className={mounted && tweaks.theme === "dark" ? "on" : ""} onClick={() => setTweaks({ theme: "dark" })}>dark</button>
-          <button suppressHydrationWarning className={mounted && tweaks.theme === "light" ? "on" : ""} onClick={() => setTweaks({ theme: "light" })}>light</button>
+          <button className="theme-opt-dark" onClick={() => setTweaks({ theme: "dark" })}>dark</button>
+          <button className="theme-opt-light" onClick={() => setTweaks({ theme: "light" })}>light</button>
         </div>
       </div>
     </header>

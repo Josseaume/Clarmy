@@ -2,7 +2,7 @@
 // quota-meters sidebar island (client), so the WS-style contract is checked at
 // both ends. No runtime imports here: types only.
 
-export type QuotaProvider = "claude" | "gemini" | "codex" | "grok";
+export type QuotaProvider = "claude" | "codex" | "grok";
 
 // ok        : live usage measured, gauge is meaningful
 // unconfigured: provider not installed / no local data source

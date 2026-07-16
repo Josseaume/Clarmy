@@ -10,7 +10,7 @@ export function Dashboard() {
   const cols = useCockpit((s) => s.tweaks.cols);
   const visibleProviders = useCockpit((s) => s.visibleProviders);
 
-  // Show every visible provider's sessions side by side (claude + codex + gemini).
+  // Show every visible provider's sessions side by side (claude + codex + …).
   const list = order
     .map((id) => sessions[id])
     .filter((v): v is NonNullable<typeof v> => Boolean(v) && visibleProviders.includes(v!.provider));

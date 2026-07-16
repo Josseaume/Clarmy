@@ -1,14 +1,12 @@
 import type { ProviderId } from "../shared/types.ts";
 import type { CliDriver } from "./types.ts";
 import { claudeDriver } from "./claude/driver.ts";
-import { geminiDriver } from "./gemini/driver.ts";
 import { codexDriver } from "./codex/driver.ts";
 import { grokDriver } from "./grok/driver.ts";
 import { opencodeDriver } from "./opencode/driver.ts";
 
 const DRIVERS: Record<ProviderId, CliDriver> = {
   claude: claudeDriver,
-  gemini: geminiDriver,
   codex: codexDriver,
   grok: grokDriver,
   opencode: opencodeDriver,

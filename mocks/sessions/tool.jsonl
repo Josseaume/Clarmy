@@ -1,4 +1,4 @@
-{"kind":"system.init","payload":{"id":"s_91ef","provider":"gemini","project":"monorepo","name":"migrate packages to vitest","model":"gemini-2.5-pro"}}
+{"kind":"system.init","payload":{"id":"s_91ef","provider":"codex","project":"monorepo","name":"migrate packages to vitest","model":"gpt-5.3-codex"}}
 {"kind":"assistant.text","payload":{"line":{"t":"gt","v":"editing packages/core/vitest.config.ts"}}}
 {"kind":"assistant.tool_use","payload":{"tool":"Edit","editPath":"packages/core/vitest.config.ts","diff":[{"type":"ctx","ln":"12","txt":"export default defineConfig({"},{"type":"del","ln":"13","txt":"  test: { environment: 'node' },"},{"type":"add","ln":"13","txt":"  test: {"},{"type":"add","ln":"14","txt":"    environment: 'happy-dom',"},{"type":"add","ln":"15","txt":"    globals: true,"},{"type":"add","ln":"16","txt":"    setupFiles: ['./test/setup.ts'],"},{"type":"add","ln":"17","txt":"  },"},{"type":"ctx","ln":"18","txt":"  resolve: { alias: {"}]}}
 {"kind":"cost.update","payload":{"delta":0.18}}

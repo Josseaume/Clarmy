@@ -6,7 +6,7 @@
 
 ### **Master console for an army of clawds**
 
-<sub>one cockpit · one socket · three vendors · N parallel agents · zero friction</sub>
+<sub>one cockpit · one socket · four vendors · N parallel agents · zero friction</sub>
 
 <br/>
 
@@ -16,7 +16,6 @@
 ![TypeScript](https://img.shields.io/badge/TypeScript_5.7-3178C6?style=for-the-badge&logo=typescript&logoColor=fff)
 ![Claude Agent SDK](https://img.shields.io/badge/Claude_Agent_SDK-D97757?style=for-the-badge&logo=anthropic&logoColor=fff)
 ![Codex CLI](https://img.shields.io/badge/Codex_CLI-10A37F?style=for-the-badge&logo=openai&logoColor=fff)
-![Gemini CLI](https://img.shields.io/badge/Gemini_CLI-4285F4?style=for-the-badge&logo=googlegemini&logoColor=fff)
 ![WebSocket](https://img.shields.io/badge/ws-010101?style=for-the-badge&logo=socket.io&logoColor=fff)
 ![xterm.js](https://img.shields.io/badge/xterm.js-0A0A0A?style=for-the-badge&logo=gnometerminal&logoColor=fff)
 
@@ -65,10 +64,10 @@
 
 ## `~/` Why CLARMY
 
-One coding agent in a terminal is magic. Ten of them, across three vendors, is a blur of windows, lost approvals and invisible spend. CLARMY is the war room:
+One coding agent in a terminal is magic. Ten of them, across four vendors, is a blur of windows, lost approvals and invisible spend. CLARMY is the war room:
 
 - **One grid, every agent** : color-coded six-state tiles, patched live over a single WebSocket.
-- **Three vendors, one cockpit** : Claude Code, OpenAI Codex and Gemini CLI side by side, metrics strictly separated.
+- **Four vendors, one cockpit** : Claude Code, OpenAI Codex, xAI Grok and opencode side by side, metrics strictly separated.
 - **Telemetry that tells the truth** : live cost includes **subagents**, context occupancy renders as an ASCII meter, vendor rate-limit windows show as quota gauges.
 - **A self-aware fleet** : CLARMY ships its own MCP server, so any piloted session can inspect the fleet, spawn or kill siblings, and schedule crons.
 - **Zero-key dev loop** : `COCKPIT_MOCK=1` replays JSONL fixtures through the real reducer.
@@ -96,7 +95,7 @@ One coding agent in a terminal is magic. Ten of them, across three vendors, is a
 
 ## `//` What's inside
 
-- **Multi-provider orchestrator** : one `CliDriver` contract, three implementations. SDK sessions wrap `query()`; CLI sessions run in a real PTY with per-vendor transcript tailers.
+- **Multi-provider orchestrator** : one `CliDriver` contract, four implementations. SDK sessions wrap `query()`; CLI sessions run in a real PTY with per-vendor transcript tailers.
 - **Pure state machine** : every SDK message and tail patch becomes a `StateAction` fed to `reduce(snapshot, action)`. Tiles render from snapshots, nothing else.
 - **Typed WS protocol** : both ends share `ws-protocol.ts`. Patches, not polls.
 - **Fleet MCP server** : list the fleet, read any sibling's snapshot, spawn / kill, manage crons, pull usage. Ask one agent to summarize what the others did today and it can.
@@ -125,8 +124,8 @@ One coding agent in a terminal is magic. Ten of them, across three vendors, is a
  ┌──────────────┐    ┌────────────────┐       ▼       ▼
  │   browser    │───▶│ Zustand store  │   SDK runner  PTY runner
  │ tile islands │    └────────────────┘   query() ─▶  claude/codex/
- └──────────────┘                         reducer ─▶  gemini CLI +
-                                          snapshot    tailers
+ └──────────────┘                         reducer ─▶  grok/opencode
+                                          snapshot    CLI + tailers
 ```
 
 Every session lives in exactly one of six states (`idle` · `running` · `tool_use` · `approval` · `error` · `done`), owned by the pure reducer in `src/lib/orchestrator/state-machine.ts`.
@@ -135,7 +134,8 @@ Every session lives in exactly one of six states (`idle` · `running` · `tool_u
 | ------ | -------- | ----------------------------------------------- | ---------------------------------- |
 | Claude | `claude` | JSONL transcripts + nested `subagents/**` trees | Mythos · Opus 4.8 · Sonnet · Haiku |
 | Codex  | `codex`  | rollout `token_count` events (window + usage)   | GPT-5.5 → GPT-5.2                  |
-| Gemini | `gemini` | `logs.json` (no token telemetry upstream)       | Gemini 3 / 2.5                     |
+| Grok   | `grok`   | reconstructed from `~/.grok` session logs       | Grok 4.5                           |
+| OpenCode | `opencode` | `~/.local/share/opencode/opencode.db` (SQLite) | opencode zen catalog (GLM, DeepSeek…) |
 
 ---
 
@@ -175,7 +175,7 @@ clarmy/
 │  ├─ components/           tiles, shell, views, overlays, terminal, ui
 │  ├─ lib/
 │  │  ├─ orchestrator/      SessionManager, runners, state-machine, crons
-│  │  ├─ providers/         CliDriver + claude / codex / gemini drivers
+│  │  ├─ providers/         CliDriver + claude / codex / grok / opencode drivers
 │  │  ├─ claude-code/       transcript scanner, live tailer, pricing
 │  │  ├─ quota/             vendor rate-limit windows
 │  │  └─ shared/            types, model registry, ws protocol (zod)

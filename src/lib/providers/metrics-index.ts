@@ -6,7 +6,6 @@ import { scanAll, aggregateUsage, type CCSession, type UsageTotals } from "../cl
 import { refreshPricing } from "../claude-code/pricing.ts";
 import { projectsDir } from "../claude-code/paths.ts";
 import { codexSessionsDir } from "./codex/paths.ts";
-import { geminiHome } from "./gemini/paths.ts";
 import { computeRows, type MetricsRow } from "./metrics-rows.ts";
 import { mergeHistory, type HistorySession } from "./history-merge.ts";
 import { createLogger } from "../util/logger.ts";
@@ -66,8 +65,8 @@ class MetricsIndex {
     return { generatedAt: this.generatedAt, sessions: this.light ?? [], perCwd: this.perCwd };
   }
 
-  // Cross-provider history rows for /api/history (claude + grok + codex +
-  // gemini), same stale-while-revalidate lifecycle as payload().
+  // Cross-provider history rows for /api/history (claude + grok + codex),
+  // same stale-while-revalidate lifecycle as payload().
   async history(): Promise<{ generatedAt: number; sessions: HistorySession[] }> {
     await this.payload();
     return { generatedAt: this.generatedAt, sessions: this.historyRows };
@@ -85,7 +84,7 @@ class MetricsIndex {
   // payload() TTL. Never crashes the server.
   startWatching(): void {
     if (this.watching) return;
-    const roots = [projectsDir(), codexSessionsDir(), geminiHome()];
+    const roots = [projectsDir(), codexSessionsDir()];
     for (const root of roots) {
       try {
         const w = watch(root, { recursive: true, persistent: false }, (_e, file) => {

@@ -4,11 +4,11 @@ import { AGENT_SHEET, type AgentSprite } from "./agents";
 import {
   buildBlocked, DECOR, DESKS, DESKS_BY_PROVIDER, SPAWN_BY_PROVIDER, WORLD_H, WORLD_W, ZONE_LABELS,
 } from "./layout";
-import { Character } from "./character";
+import { Character, resolveTheme, themeColors, type OfficeTheme } from "./character";
 import { applyState, hash } from "./behavior";
 import { TILE, type Desk, type SessionLite } from "./types";
 
-const AGENT_SPRITES: readonly AgentSprite[] = ["grok", "claude", "gemini", "codex"];
+const AGENT_SPRITES: readonly AgentSprite[] = ["grok", "claude", "codex"];
 
 /**
  * Pre-HD on-grid width (px at TILE=16) each décor frame must occupy: the
@@ -40,7 +40,7 @@ export function createOfficeScene(P: typeof import("phaser")) {
   private deskOf = new Map<string, Desk>();
   private freeDesks: Partial<Record<ProviderId, Desk[]>> = {
     grok: [...(DESKS_BY_PROVIDER.grok ?? [])], claude: [...(DESKS_BY_PROVIDER.claude ?? [])],
-    gemini: [...(DESKS_BY_PROVIDER.gemini ?? [])], codex: [...(DESKS_BY_PROVIDER.codex ?? [])],
+    opencode: [...(DESKS_BY_PROVIDER.opencode ?? [])], codex: [...(DESKS_BY_PROVIDER.codex ?? [])],
   };
   private pcs = new Map<number, PhaserNamespace.GameObjects.Sprite>();
   private blocked = buildBlocked();
@@ -50,6 +50,9 @@ export function createOfficeScene(P: typeof import("phaser")) {
   private selectedId: string | null = null;
   private charClicked = false;
   private lastLabelPass = 0;
+  private theme: OfficeTheme = resolveTheme();
+  private bg: PhaserNamespace.GameObjects.Image | null = null;
+  private zoneLabels: PhaserNamespace.GameObjects.Text[] = [];
 
   constructor() {
     super("office");
@@ -100,6 +103,18 @@ export function createOfficeScene(P: typeof import("phaser")) {
   setShowPrompts(show: boolean): void {
     this.showPrompts = show;
     for (const ch of this.chars.values()) ch.setPromptVisible(show);
+  }
+
+  /** Re-theme the world in place: background texture, zone labels, characters. */
+  applyTheme(theme: OfficeTheme): void {
+    if (theme === this.theme) return;
+    this.theme = theme;
+    if (!this.created) return; // create() reads this.theme when it runs
+    this.bg?.setTexture(`office-bg-${theme}`);
+    const colors = themeColors(theme);
+    for (const label of this.zoneLabels) label.setBackgroundColor(colors.zoneLabelBg);
+    for (const ch of this.chars.values()) ch.applyTheme(theme);
+    for (const list of this.minis.values()) for (const m of list) m.applyTheme(theme);
   }
 
   recenter(): void {
@@ -261,8 +276,7 @@ export function createOfficeScene(P: typeof import("phaser")) {
   }
 
   private drawRoom(): void {
-    const dark = typeof document !== "undefined" && document.documentElement.dataset.theme !== "light";
-    this.add.image(0, 0, dark ? "office-bg-dark" : "office-bg-light").setOrigin(0).setDepth(-12);
+    this.bg = this.add.image(0, 0, `office-bg-${this.theme}`).setOrigin(0).setDepth(-12);
     for (const d of DECOR) {
       const y = d.floor ? d.row * TILE : (d.tall ? d.row * TILE - TILE : d.row * TILE);
       const depth = d.floor ? -9.5 : d.row * TILE + TILE - 0.1;
@@ -278,13 +292,14 @@ export function createOfficeScene(P: typeof import("phaser")) {
   }
 
   private drawZoneLabels(): void {
-    const dark = typeof document !== "undefined" && document.documentElement.dataset.theme !== "light";
+    const colors = themeColors(this.theme);
     for (const z of ZONE_LABELS) {
       const label = this.add.text(z.col * TILE, z.row * TILE, z.text, {
         fontFamily: "monospace", fontSize: "5px", color: z.color,
-        backgroundColor: dark ? "rgba(20,18,16,0.55)" : "rgba(245,242,236,0.65)",
+        backgroundColor: colors.zoneLabelBg,
         padding: { x: 2, y: 1 },
       }).setOrigin(0).setResolution(4).setDepth(2).setAlpha(0.7);
+      this.zoneLabels.push(label);
       this.tweens.add({ targets: label, alpha: { from: 0.45, to: 0.85 }, duration: 2_400, yoyo: true, repeat: -1 });
     }
   }
@@ -293,7 +308,7 @@ export function createOfficeScene(P: typeof import("phaser")) {
     const zones: Array<{ x: number; y: number; r: number; color: number; depth: number }> = [
       { x: 4 * TILE, y: 4 * TILE, r: 18, color: 0x9b7cff, depth: 3 },   // Nécropolis
       { x: 35 * TILE, y: 4 * TILE, r: 16, color: 0xd97757, depth: 3 },   // Bibliothèque
-      { x: 4 * TILE, y: 19 * TILE, r: 14, color: 0x4796e3, depth: 3 },  // Grand Salon
+      { x: 4 * TILE, y: 19 * TILE, r: 14, color: 0xe8b339, depth: 3 },  // Grand Salon
       { x: 34 * TILE, y: 18 * TILE, r: 20, color: 0x10a37f, depth: 2 },  // Zone Dégout
     ];
     for (const z of zones) {

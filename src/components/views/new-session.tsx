@@ -11,7 +11,6 @@ import { ModelPicker } from "./model-picker";
 
 const BUILTIN_TOOLS = ["Bash", "Read", "Edit", "Write", "Grep", "TodoWrite"];
 const EXTRA_TOOLS = ["Glob", "WebFetch", "WebSearch", "Task"];
-const INITIAL_TOOLS = ["Bash", "Read", "Edit", "Write", "Grep", "TodoWrite"];
 
 const LS_KEY = "cockpit.newSession.prefs.v1";
 type Prefs = { provider?: ProviderId; model?: ModelId; effort?: Effort; skipPerms?: boolean };
@@ -70,7 +69,7 @@ export function NewSessionView() {
     if (levels.length === 0) { setEffort(null); return; }
     setEffort((cur) => (cur && levels.includes(cur) ? cur : defaultEffortFor(model)));
   }, [model]);
-  const [tools, setTools] = useState<string[]>(INITIAL_TOOLS);
+  const [tools, setTools] = useState<string[]>([...BUILTIN_TOOLS]);
   const [project, setProject] = useState("");
   const [cwd, setCwd] = useState(initialCwd);
   const [cwdMissing, setCwdMissing] = useState(false);
@@ -227,6 +226,11 @@ export function NewSessionView() {
     }
   };
 
+  // Keyboard/auto-launch effects capture submit via a ref so they always call
+  // the latest closure (submit reads far more state than the effect deps track).
+  const submitRef = useRef(submit);
+  submitRef.current = submit;
+
   useEffect(() => {
     if (!pendingLaunch) return;
     if (!project.trim() || !cwd.trim() || !prompt.trim()) return;
@@ -235,7 +239,7 @@ export function NewSessionView() {
       if (e.key === "Escape") setPendingLaunch(false);
     };
     window.addEventListener("keydown", onKey);
-    const t = setTimeout(() => { void submit(); }, 500);
+    const t = setTimeout(() => { void submitRef.current(); }, 500);
     return () => { clearTimeout(t); window.removeEventListener("keydown", onKey); };
   }, [pendingLaunch, project, cwd, prompt, busy]);
 
@@ -243,19 +247,19 @@ export function NewSessionView() {
     const onKey = (e: KeyboardEvent) => {
       if ((e.metaKey || e.ctrlKey) && e.key === "Enter") {
         e.preventDefault();
-        if (!busy) void submit();
+        if (!busy) void submitRef.current();
       } else if (e.key === "Escape" && !pendingLaunch) {
         router.push("/");
       }
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [busy, pendingLaunch, project, cwd, prompt]);
+  }, [busy, pendingLaunch, router]);
 
   return (
     <div className="new-session-view">
       <h1>New session</h1>
-      <p className="lede">Spawn an agent CLI session in a project directory. Pick the provider (Gemini, Claude, Codex, Grok or OpenCode), then approve tool calls individually or let a set of them run unattended.</p>
+      <p className="lede">Spawn an agent CLI session in a project directory. Pick the provider (Claude, Codex, Grok or OpenCode), then approve tool calls individually or let a set of them run unattended.</p>
 
       <div className="form-card">
         <div className="form-section">

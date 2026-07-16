@@ -1,7 +1,7 @@
 import type { ProviderId } from "@/lib/shared/types";
 import type { SessionState } from "@/lib/shared/types";
 
-export type AgentSprite = "grok" | "claude" | "gemini" | "codex";
+export type AgentSprite = "grok" | "claude" | "codex";
 
 export interface AgentSheetMeta {
   readonly frameWidth: number;
@@ -17,7 +17,6 @@ export const AGENT_SHEET: Record<AgentSprite, AgentSheetMeta> = {
   // Claude = Clawd blob, baked square (48×48, blob bottom-anchored with top margin)
   // by scripts/gen-clawd-sprite.py so it always displays clean, never cut by desks.
   claude: { frameWidth: 48, frameHeight: 48, displayScale: 0.7 },
-  gemini: { frameWidth: 16, frameHeight: 32, displayScale: 1.35 },
   codex: { frameWidth: 16, frameHeight: 32, displayScale: 1.35 },
 };
 
@@ -38,11 +37,6 @@ export const AGENT_PERSONAS: Record<AgentSprite, AgentPersona> = {
     label: "Claude",
     tagline: "nerd classe, lunettes, cravate serrée",
   },
-  gemini: {
-    sprite: "gemini",
-    label: "Gemini",
-    tagline: "chevalier poète — ne parle qu'en vers",
-  },
   codex: {
     sprite: "codex",
     label: "Copilot",
@@ -55,7 +49,6 @@ export const AGENT_PERSONAS: Record<AgentSprite, AgentPersona> = {
 const PROVIDER_SPRITE: Partial<Record<ProviderId, AgentSprite>> = {
   grok: "grok",
   claude: "claude",
-  gemini: "gemini",
   codex: "codex",
 };
 
@@ -63,7 +56,7 @@ export function spriteForProvider(provider: ProviderId): AgentSprite {
   return PROVIDER_SPRITE[provider] ?? "claude";
 }
 
-// Flavor lines keyed by sprite + state. Gemini always rhymes; Codex is self-deprecating.
+// Flavor lines keyed by sprite + state. Codex is self-deprecating.
 const QUIPS: Record<AgentSprite, Partial<Record<SessionState, readonly string[]>>> = {
   grok: {
     running: ["…le code murmure sous la lune.", "encore une nuit, encore un refactor."],
@@ -80,32 +73,6 @@ const QUIPS: Record<AgentSprite, Partial<Record<SessionState, readonly string[]>
     approval: ["permission requise — procédure standard.", "j'attends ta validation."],
     error: ["intéressant. je note l'erreur.", "hm. cas limite détecté."],
     done: ["livré. proprement.", "mission accomplie, comme prévu."],
-  },
-  gemini: {
-    running: [
-      "La plume trace, le code s'élance.",
-      "Sous ma cape, les tests avancent.",
-    ],
-    tool_use: [
-      "J'ouvre l'armoire aux outils sacrés.",
-      "Le grimoire du shell m'est révélé.",
-    ],
-    idle: [
-      "Le silence est un vers inachevé.",
-      "J'attends, tel un pont sur l'oubli.",
-    ],
-    approval: [
-      "Sire, daignez accorder ce passage.",
-      "Un garde bloque la porte du script.",
-    ],
-    error: [
-      "Hélas ! Le dragon segfault encore.",
-      "La quête échoue — mais l'honneur reste.",
-    ],
-    done: [
-      "La quête est close, gloire au royaume.",
-      "Victoire ! Les bardes en chanteront.",
-    ],
   },
   codex: {
     running: ["ok ok je code…", "j'essaie de suivre le rythme."],
@@ -143,12 +110,6 @@ export function quipStyle(sprite: AgentSprite, dark: boolean): QuipStyle {
       return {
         color: dark ? "#C4B0FF" : "#4A2868",
         backgroundColor: dark ? "rgba(26,16,32,0.82)" : "rgba(232,223,240,0.92)",
-        fontStyle: "italic",
-      };
-    case "gemini":
-      return {
-        color: dark ? "#A8C8F0" : "#2A5080",
-        backgroundColor: dark ? "rgba(20,28,40,0.82)" : "rgba(216,228,240,0.92)",
         fontStyle: "italic",
       };
     case "codex":

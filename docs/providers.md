@@ -1,13 +1,13 @@
 # Multi-provider CLIs
 
-Cockpit pilots three agent CLIs side by side: **Gemini** (Google `gemini`),
-**Claude** (Anthropic `claude`), and **Codex** (OpenAI `codex`). The active
-provider is a topbar switch; sessions and metrics are counted strictly per
-provider, never mixed.
+Cockpit pilots several agent CLIs side by side: **Claude** (Anthropic
+`claude`), **Codex** (OpenAI `codex`), **Grok** (xAI `grok`), and **opencode**
+(SST `opencode`). The active provider is a topbar switch; sessions and metrics
+are counted strictly per provider, never mixed.
 
 ## Concepts
 
-- `ProviderId = "gemini" | "claude" | "codex"` lives in
+- `ProviderId = "claude" | "codex" | "grok" | "opencode"` lives in
   `src/lib/shared/providers.ts` (client-safe: label, vendor, binary name, home
   dir, accent). `DEFAULT_PROVIDER` is `claude`.
 - The model registry (`src/lib/shared/models.ts`) is per-provider: each
@@ -27,7 +27,7 @@ One driver per provider, resolved by `getDriver(provider)`
 | --- | --- |
 | `findCli()` | absolute binary path or null (honours `<PROVIDER>_CLI_PATH`) |
 | `buildArgs(cfg, effort)` | argv for the spawn |
-| `promptDelivery` | `"type"` pastes the prompt into the TTY (Claude); `"arg"` embeds it in argv (Gemini/Codex) |
+| `promptDelivery` | `"type"` pastes the prompt into the TTY (Claude); `"arg"` embeds it in argv (Codex/Grok/opencode) |
 | `effortInArgs` / `effortSlash` | whether effort is a launch flag, and the runtime slash command (or null) to change it live |
 | `createTailer(cwd, startedAt, onPatch)` | live metrics watcher emitting `TailPatch` |
 | `scanSessions()` | historical sessions as `ProviderSession[]` for `/api/metrics` |
@@ -45,23 +45,6 @@ flag, `ultracode` via the `/effort` slash command), `--permission-mode` /
 `--dangerously-skip-permissions`. Live + historical metrics from the JSONL under
 `~/.claude/projects/`.
 
-### Gemini (`~/.gemini`)
-Driven interactively: `gemini -m <model> -i "<prompt>" [--approval-mode yolo |
---yolo]`. Gemini exposes **no** reasoning-effort CLI flag, so its models have no
-effort ladder. Resume via `--resume <id>`.
-
-History comes from `~/.gemini/tmp/<project_hash>/logs.json` (project_hash is a
-SHA-256 of the project root path; the parser tolerates both a JSON array and the
-newer JSONL form). **logs.json records carry no token counts and no cwd**, so:
-
-- sessions and message counts are reported; cost/tokens are left at zero;
-- sessions are keyed by the opaque `project_hash` dir.
-
-Token usage is only emitted on Gemini's headless `--output-format json` stdout
-(`stats.models.<id>.tokens`: `prompt`/`candidates`/`thoughts`/`cached`) or via
-its OpenTelemetry export. To wire durable Gemini cost accounting later, enable
-`--telemetry` and parse the OTLP output, or run headless and capture stdout.
-
 ### Codex (`~/.codex`, override `CODEX_HOME`)
 Driven interactively: `codex -m <model> -c model_reasoning_effort=<low|medium|
 high> --ask-for-approval <policy> --sandbox <mode>` (or
@@ -77,10 +60,31 @@ type `token_count` (`info.total_token_usage` is cumulative, so we never sum).
 `input_tokens - cached_input_tokens`; `output_tokens + reasoning_output_tokens`
 is billed as output.
 
+### Grok (`~/.grok`)
+Driven interactively: `grok --no-alt-screen -m <model> --reasoning-effort
+<low|medium|high> [--permission-mode auto | --always-approve] "<prompt>"`.
+
+- **`--no-alt-screen` is mandatory.** By default the `grok` TUI renders
+  fullscreen on the terminal's alternate screen, which freezes xterm.js history
+  replay in Cockpit's PTY. `--no-alt-screen` forces inline rendering
+  per-invocation without persisting anything. Do **not** use `--minimal` or
+  `--fullscreen`: those flags are sticky (written to `~/.grok/config.toml`) and
+  would silently change the user's own `grok` sessions.
+- **Single model: `grok-4.5`**, with reasoning effort delivered as the
+  `--reasoning-effort low|medium|high` launch flag (no known slash command to
+  change it live). Model ids should be re-verified with `grok models` on every
+  CLI version bump — the catalog has churned before (grok-cli v0.2.x dropped
+  the earlier coding models).
+- **Auth is `grok login`** (OIDC token that expires). When the token is stale
+  the TUI parks on its login screen, so a piloted session that seems stuck
+  right after spawn usually just needs a fresh `grok login` in a terminal.
+- Resume re-opens a prior session via `-r <id>` (no prompt is sent on resume,
+  matching the Codex/opencode drivers).
+
 ## Pricing
 
 `claude-code/pricing.ts` is provider-neutral. Fallback per-token prices for
-Gemini and Codex models were added, plus substring matches; LiteLLM overrides
+non-Anthropic models were added, plus substring matches; LiteLLM overrides
 them when reachable.
 
 ## Adding a provider
@@ -94,15 +98,14 @@ them when reachable.
 The topbar, store, dashboard, new-session form and metrics view need no changes:
 they iterate `PROVIDERS` and scope by the active `provider`.
 
-## Status of the Gemini/Codex drivers
+## Status of the Codex driver
 
-`gemini` and `codex` were **not installed** in the build environment, so their
-flags, paths and transcript formats are implemented from the vendors' published
-docs and source (verified by research, high confidence for Codex, medium for
-Gemini's exact model ids and the logs.json/JSONL migration state). They degrade
-gracefully: a missing home dir yields an empty scan, and an absent binary yields
-a clear "install / set `<PROVIDER>_CLI_PATH`" error at spawn. Verify the flags
-against the installed build and adjust `buildArgs` if a vendor changed them.
+`codex` was **not installed** in the build environment, so its flags, paths and
+transcript format are implemented from the vendor's published docs and source
+(verified by research, high confidence). It degrades gracefully: a missing home
+dir yields an empty scan, and an absent binary yields a clear "install / set
+`<PROVIDER>_CLI_PATH`" error at spawn. Verify the flags against the installed
+build and adjust `buildArgs` if the vendor changed them.
 
 ## Local checks
 

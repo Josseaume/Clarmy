@@ -2,8 +2,8 @@ import type { Effort, ModelId, SpawnConfig, TodoItem, ProviderId } from "../shar
 
 // A delta of live session metrics, emitted by a provider tailer as it reads the
 // CLI's on-disk transcript. Shared by every provider so PtyRunner consumes one
-// shape regardless of vendor. (Moved here from claude-code/session-tailer so the
-// gemini/codex tailers can depend on it without importing Claude code.)
+// shape regardless of vendor. (Moved here from claude-code/session-tailer so
+// other providers' tailers can depend on it without importing Claude code.)
 export interface TailPatch {
   readonly cost?: number;
   readonly tool?: string | null;
@@ -63,7 +63,7 @@ export interface ProviderSession {
 
 // How the initial prompt reaches the CLI. "type" pastes it into the TTY after
 // the banner appears (Claude); "arg" embeds it in argv so no typing is needed
-// (Gemini/Codex, whose TUIs we do not drive keystroke-by-keystroke).
+// (Codex, whose TUI we do not drive keystroke-by-keystroke).
 export type PromptDelivery = "type" | "arg";
 
 // The server-side contract for one CLI vendor: how to find the binary, how to
@@ -85,8 +85,8 @@ export interface CliDriver {
   envExtras(cfg: SpawnConfig): Record<string, string>;
 
   // argv to load cockpit's per-session MCP config file at launch. Claude takes
-  // `--mcp-config <path>`; codex/gemini/grok accept MCP servers only via their
-  // own subcommand/settings and reject an unknown launch flag, so they return []
+  // `--mcp-config <path>`; codex/grok accept MCP servers only via their own
+  // subcommand/settings and reject an unknown launch flag, so they return []
   // (the file is cleaned up when unused).
   mcpConfigArgs(path: string): string[];
 

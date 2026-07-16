@@ -18,8 +18,7 @@ interface CCSessionRow {
 type Filter = "all" | "done" | "error";
 
 // A row is resumable only when we know a real working directory to launch the
-// CLI in. Gemini's logs.json carries no cwd (we synthesise "gemini:<hash>"), so
-// those rows cannot be resumed; everything with an absolute/home path can.
+// CLI in; everything with an absolute/home path can be resumed.
 function canResume(cwd: string): boolean {
   return cwd.startsWith("/") || cwd.startsWith("~");
 }
@@ -130,7 +129,7 @@ export function HistoryPage() {
         <div>
           <h1>History</h1>
           <p className="sub">
-            {rows.length} sessions across Claude, Grok, Codex &amp; Gemini. Sourced from each CLI&apos;s local history (<code>~/.claude</code>, <code>~/.grok</code>, <code>~/.codex</code>, <code>~/.gemini</code>).
+            {rows.length} sessions across Claude, Grok &amp; Codex. Sourced from each CLI&apos;s local history (<code>~/.claude</code>, <code>~/.grok</code>, <code>~/.codex</code>).
           </p>
         </div>
         <div className="right">

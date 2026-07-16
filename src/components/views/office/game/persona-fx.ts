@@ -27,7 +27,6 @@ export class PersonaFxController {
     switch (this.sprite) {
       case "grok": this.applyGrok(mode, state); break;
       case "claude": this.applyClaude(mode, state); break;
-      case "gemini": this.applyGemini(mode, state); break;
       case "codex": this.applyCodex(mode, state); break;
     }
   }
@@ -85,38 +84,6 @@ export class PersonaFxController {
     flash();
     const timer = this.scene.time.addEvent({ delay: 2_800, loop: true, callback: flash });
     this.handles.timers.push(timer);
-  }
-
-  // ── Gemini: sword slash at tools, sparkles when done ─────────────────────
-  private applyGemini(mode: CharMode, state: SessionState): void {
-    if (mode === "use_tool" || state === "tool_use") {
-      const blade = this.scene.add.rectangle(10, -18, 10, 2, 0xc9a84c, 0.95).setAngle(-35);
-      this.track(blade);
-      this.container.add(blade);
-      this.tween(blade, { angle: 25, alpha: 0 }, 320, 0, false, () => blade.setAlpha(0));
-      const timer = this.scene.time.addEvent({
-        delay: 900, loop: true,
-        callback: () => {
-          blade.setAlpha(0.95).setAngle(-35);
-          this.tween(blade, { angle: 25, alpha: 0 }, 320);
-        },
-      });
-      this.handles.timers.push(timer);
-    }
-    if (state === "done" || mode === "celebrate") {
-      for (let i = 0; i < 4; i += 1) {
-        const spark = this.scene.add.rectangle(-6 + i * 4, -24 - i, 2, 2, 0xc9a84c, 0.8);
-        this.track(spark);
-        this.container.add(spark);
-        this.tween(spark, { y: -32 - i * 2, alpha: 0 }, 600 + i * 120, -1);
-      }
-    }
-    if (mode === "sit_type") {
-      const quill = this.scene.add.rectangle(-5, -16, 1, 5, 0x4796e3, 0.8).setAngle(20);
-      this.track(quill);
-      this.container.add(quill);
-      this.tween(quill, { y: -18, alpha: { from: 0.5, to: 1 } }, 500, -1, true);
-    }
   }
 
   // ── Codex/Copilot: slouch + defeat smoke + sweat on error ────────────────

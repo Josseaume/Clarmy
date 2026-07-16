@@ -3,7 +3,7 @@
 // metadata here is client-safe (no node imports) so the topbar, store and forms
 // can render provider chips; the server-side driver (flags + transcript parser)
 // lives in src/lib/providers/<id>.
-export const PROVIDER_IDS = ["gemini", "claude", "codex", "grok", "opencode"] as const;
+export const PROVIDER_IDS = ["claude", "codex", "grok", "opencode"] as const;
 export type ProviderId = typeof PROVIDER_IDS[number];
 
 export const DEFAULT_PROVIDER: ProviderId = "claude";
@@ -24,15 +24,6 @@ export interface ProviderMeta {
 }
 
 export const PROVIDERS: readonly ProviderMeta[] = [
-  {
-    id: "gemini",
-    label: "Gemini",
-    vendor: "Google",
-    binary: "gemini",
-    homeDir: ".gemini",
-    accent: "#4796e3",
-    tagline: "Google Gemini CLI",
-  },
   {
     id: "claude",
     label: "Claude",

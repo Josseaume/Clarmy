@@ -133,7 +133,7 @@ async function doctor() {
   check("node >= 22", major >= 22, `v${process.versions.node}`);
   check("pnpm", sh("pnpm", ["--version"]).code === 0, sh("pnpm", ["--version"]).out || "not found");
 
-  for (const cli of ["claude", "codex", "gemini", "grok"]) {
+  for (const cli of ["claude", "codex", "grok"]) {
     const r = sh("which", [cli]);
     check(`${cli} CLI`, r.code === 0 ? true : null, r.code === 0 ? r.out : "not installed (optional)");
   }

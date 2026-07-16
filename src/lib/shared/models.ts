@@ -17,7 +17,7 @@ export interface ModelSpec {
 // Model ids stay globally unique across providers so a single ModelId string is
 // enough to recover its provider. effortLevels capture what each vendor's CLI
 // actually exposes: Claude has a six-step ladder, Codex a reasoning-effort
-// triple, Gemini none.
+// triple.
 export const MODELS: readonly ModelSpec[] = [
   // ---- Anthropic / Claude -------------------------------------------------
   {
@@ -79,60 +79,6 @@ export const MODELS: readonly ModelSpec[] = [
     defaultEffort: null,
   },
 
-  // ---- Google / Gemini ----------------------------------------------------
-  // Gemini has no reasoning-effort CLI flag, so effortLevels stays empty. ids are
-  // the concrete strings `gemini -m <id>` accepts (gemini-cli v0.44 bundle).
-  {
-    id: "gemini-3-flash-preview",
-    provider: "gemini",
-    apiId: "gemini-3-flash-preview",
-    label: "Gemini 3 Flash",
-    tagline: "current gen, fast",
-    aliasFrom: ["gemini-3-flash-preview", "gemini-3-flash"],
-    effortLevels: [],
-    defaultEffort: null,
-  },
-  {
-    id: "gemini-3.1-pro-preview",
-    provider: "gemini",
-    apiId: "gemini-3.1-pro-preview",
-    label: "Gemini 3.1 Pro",
-    tagline: "deepest reasoning, long context",
-    aliasFrom: ["gemini-3.1-pro-preview", "gemini-3.1-pro", "gemini-3-pro-preview", "gemini-3-pro"],
-    effortLevels: [],
-    defaultEffort: null,
-  },
-  {
-    id: "gemini-2.5-pro",
-    provider: "gemini",
-    apiId: "gemini-2.5-pro",
-    label: "Gemini 2.5 Pro",
-    tagline: "stable, long context",
-    aliasFrom: ["gemini-2.5-pro", "gemini-2.5-pro-latest"],
-    effortLevels: [],
-    defaultEffort: null,
-  },
-  {
-    id: "gemini-2.5-flash",
-    provider: "gemini",
-    apiId: "gemini-2.5-flash",
-    label: "Gemini 2.5 Flash",
-    tagline: "stable, fast",
-    aliasFrom: ["gemini-2.5-flash", "gemini-2.5-flash-latest"],
-    effortLevels: [],
-    defaultEffort: null,
-  },
-  {
-    id: "gemini-2.5-flash-lite",
-    provider: "gemini",
-    apiId: "gemini-2.5-flash-lite",
-    label: "Gemini 2.5 Flash Lite",
-    tagline: "cheapest, fastest",
-    aliasFrom: ["gemini-2.5-flash-lite", "gemini-2.5-flash-lite-latest"],
-    effortLevels: [],
-    defaultEffort: null,
-  },
-
   // ---- OpenAI / Codex -----------------------------------------------------
   // Codex exposes reasoning effort via `-c model_reasoning_effort=<level>`. The
   // selectable models + their effort ladder are taken verbatim from
@@ -190,29 +136,20 @@ export const MODELS: readonly ModelSpec[] = [
 
   // ---- xAI / Grok ---------------------------------------------------------
   // The Grok CLI (`grok`) pilots xAI coding models through
-  // cli-chat-proxy.grok.com. Both report supports_reasoning_effort=false, so
-  // effortLevels stays empty even though the binary exposes a global --effort
-  // flag. ids are the concrete strings `grok -m <id>` accepts (models_cache.json
-  // on grok-cli v0.2.51).
+  // cli-chat-proxy.grok.com. On grok-cli v0.2.101 the catalog
+  // (models_cache.json) exposes a single model, grok-4.5, which reports
+  // supports_reasoning_effort=true, driven via the CLI's --effort flag.
+  // Retired ids (grok-build, grok-composer-*) alias here so existing history
+  // keeps resolving.
   {
-    id: "grok-build",
+    id: "grok-4.5",
     provider: "grok",
-    apiId: "grok-build",
-    label: "Grok Build",
+    apiId: "grok-4.5",
+    label: "Grok 4.5",
     tagline: "xAI's latest coding model",
-    aliasFrom: ["grok-build"],
-    effortLevels: [],
-    defaultEffort: null,
-  },
-  {
-    id: "grok-composer-2.5-fast",
-    provider: "grok",
-    apiId: "grok-composer-2.5-fast",
-    label: "Grok Composer 2.5 Fast",
-    tagline: "fast coding model",
-    aliasFrom: ["grok-composer-2.5-fast", "grok-composer"],
-    effortLevels: [],
-    defaultEffort: null,
+    aliasFrom: ["grok-4.5", "grok-build", "grok-composer-2.5-fast", "grok-composer"],
+    effortLevels: ["low", "medium", "high"],
+    defaultEffort: "high",
   },
 
   // ---- SST / opencode -----------------------------------------------------
@@ -376,21 +313,15 @@ export function modelSupportsEffortFor(id: string): boolean {
 
 // Max context window per model, for the live context meter (denominator). Codex
 // reports its own `model_context_window` in token_count events, so its entries
-// are only a fallback before that arrives; Claude/Gemini have no live window
-// signal, so the registry value is authoritative. 0 / absent = unknown (the UI
-// hides the meter).
+// are only a fallback before that arrives; Claude has no live window signal,
+// so the registry value is authoritative. 0 / absent = unknown (the UI hides
+// the meter).
 const CONTEXT_WINDOWS: Record<string, number> = {
   "mythos": 1_000_000,
   "opus-4.8": 1_000_000,
   "sonnet-4.6": 1_000_000,
   "haiku-4.5": 200_000,
-  "gemini-3-flash-preview": 1_000_000,
-  "gemini-3.1-pro-preview": 1_000_000,
-  "gemini-2.5-pro": 1_000_000,
-  "gemini-2.5-flash": 1_000_000,
-  "gemini-2.5-flash-lite": 1_000_000,
-  "grok-build": 512_000,
-  "grok-composer-2.5-fast": 200_000,
+  "grok-4.5": 500_000,
 };
 
 export function contextWindowFor(id: string): number {

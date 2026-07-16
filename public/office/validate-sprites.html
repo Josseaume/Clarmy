@@ -65,11 +65,10 @@
   // Mirrors src/components/views/office/game/agents.ts (AGENT_SHEET) + scene.ts (createAnims).
   const SHEET = {
     claude: { frameW: 48, frameH: 48, label: "Claude", tagline: "Clawd, blob orange, design validé" },
-    gemini: { frameW: 16, frameH: 32, label: "Gemini", tagline: "chevalier poète, ne parle qu'en vers" },
     codex:  { frameW: 16, frameH: 32, label: "Copilot", tagline: "regarde les IA chinoises le fumer" },
     grok:   { frameW: 44, frameH: 88, label: "Grok", tagline: "Anni, gothique élancée, regard dominateur" },
   };
-  const ORDER = ["claude", "grok", "gemini", "codex"];
+  const ORDER = ["claude", "grok", "codex"];
   const STAGE_H = 192; // max on-stage sprite height
   const STAGE_W = 130; // max on-stage sprite width (wide blobs must fit the card)
   const CB = Date.now();

@@ -7,11 +7,32 @@ import { STATE_TINT, TILE, type CharMode, type Dir, type SessionLite, type Spot 
 const WALK_SPEED = 56;
 const FRAME: Record<Dir, number> = { down: 0, up: 7, right: 14, left: 14 };
 
+export type OfficeTheme = "dark" | "light";
+
+/** Resolved theme from <html data-theme>; the attribute always carries "dark" | "light". */
+export function resolveTheme(): OfficeTheme {
+  return typeof document !== "undefined" && document.documentElement.dataset.theme === "light"
+    ? "light" : "dark";
+}
+
+/** Every theme-dependent color in the office world, in one place. */
+export function themeColors(theme: OfficeTheme) {
+  const dark = theme === "dark";
+  return {
+    tagColor: dark ? "#EDE9E0" : "#2B2926",
+    tagBg: dark ? "rgba(31,30,28,0.78)" : "rgba(245,242,236,0.82)",
+    shadowAlpha: dark ? 0.35 : 0.18,
+    zoneLabelBg: dark ? "rgba(20,18,16,0.55)" : "rgba(245,242,236,0.65)",
+  } as const;
+}
+
 export class Character {
   readonly id: string;
   readonly container: Phaser.GameObjects.Container;
   readonly sprite: Phaser.GameObjects.Sprite;
   private readonly tag: Phaser.GameObjects.Text;
+  private readonly shadow: Phaser.GameObjects.Ellipse;
+  private theme: OfficeTheme;
   private dot!: Phaser.GameObjects.Arc;
   private aura!: Phaser.GameObjects.Ellipse;
   private readonly spriteKey: string;
@@ -59,12 +80,13 @@ export class Character {
 
     this.sprite = scene.add.sprite(0, 0, this.spriteKey, FRAME.down + 1)
       .setOrigin(0.5, 1).setScale(mini ? sheetMeta.displayScale * 0.58 : sheetMeta.displayScale);
-    const dark = typeof document !== "undefined" && document.documentElement.dataset.theme !== "light";
+    this.theme = resolveTheme();
+    const colors = themeColors(this.theme);
     const tagY = Math.round(-sheetMeta.frameHeight * sheetMeta.displayScale - 10);
     this.tag = scene.add.text(0, tagY, displayName(session), {
       fontFamily: "monospace", fontSize: "6.5px",
-      color: dark ? "#EDE9E0" : "#2B2926",
-      backgroundColor: dark ? "rgba(31,30,28,0.78)" : "rgba(245,242,236,0.82)",
+      color: colors.tagColor,
+      backgroundColor: colors.tagBg,
       padding: { x: 3, y: 1 },
     }).setOrigin(0.5, 1).setResolution(4);
     // State is shown via the aura + label; the on-body dot read as an ugly grey
@@ -73,12 +95,27 @@ export class Character {
     this.aura = scene.add.ellipse(0, -1, 18, 8, 0x8a857c, 0).setVisible(false);
     this.halo = scene.add.ellipse(0, -2, 22, 10, 0xd97757, 0.0).setVisible(false);
     this.container.setPosition(spawn.col * TILE + TILE / 2, spawn.row * TILE + TILE);
-    const shadow = scene.add.ellipse(0, -1, 14, 5, 0x000000, dark ? 0.35 : 0.18);
-    this.container.add([this.halo, shadow, this.aura, this.sprite, this.dot, this.tag]);
+    this.shadow = scene.add.ellipse(0, -1, 14, 5, 0x000000, colors.shadowAlpha);
+    this.container.add([this.halo, this.shadow, this.aura, this.sprite, this.dot, this.tag]);
     if (mini) this.container.setScale(0.7);
     this.container.setAlpha(0);
     scene.tweens.add({ targets: this.container, alpha: 1, duration: 350 });
     this.face(spawn.face);
+  }
+
+  /** Re-tint every theme-dependent piece (name tag, shadow, quip) in place. */
+  applyTheme(theme: OfficeTheme): void {
+    if (theme === this.theme) return;
+    this.theme = theme;
+    const colors = themeColors(theme);
+    this.tag.setColor(colors.tagColor).setBackgroundColor(colors.tagBg);
+    this.shadow.setFillStyle(0x000000, colors.shadowAlpha);
+    if (this.quip) {
+      const style = quipStyle(spriteForProvider(this.session.provider), theme === "dark");
+      this.quip.setColor(style.color)
+        .setBackgroundColor(style.backgroundColor)
+        .setFontStyle(style.fontStyle ?? "normal");
+    }
   }
 
   goTo(spot: Spot, mode: CharMode): void {
@@ -221,8 +258,7 @@ export class Character {
     const agent = spriteForProvider(this.session.provider);
     const line = quipFor(agent, this.session.state, this.session.id);
     if (!line) { this.quip?.setVisible(false); return; }
-    const dark = typeof document !== "undefined" && document.documentElement.dataset.theme !== "light";
-    const style = quipStyle(agent, dark);
+    const style = quipStyle(agent, this.theme === "dark");
     if (!this.quip) {
       this.quip = this.scene.add.text(0, -42, line, {
         fontFamily: "monospace", fontSize: "5.5px",

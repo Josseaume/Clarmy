@@ -25,7 +25,7 @@ parentPort?.on("message", (msg: BuildMsg) => {
       // the structured-clone payload small.
       const full = scanAll();
       const sessions = full.map(({ usage: _usage, ...rest }) => rest);
-      // Cross-provider history rows for /api/history (claude + grok + codex + gemini).
+      // Cross-provider history rows for /api/history (claude + grok + codex).
       const history = mergeHistory(full, providerSessions);
       // Per-cwd token aggregates for /api/projects (needs the usage records,
       // which never leave the worker).

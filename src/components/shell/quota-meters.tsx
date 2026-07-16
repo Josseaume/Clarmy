@@ -98,7 +98,7 @@ function SkeletonRow({ name }: { name: string }) {
   );
 }
 
-const PLACEHOLDER = ["Claude", "Codex", "Gemini"];
+const PLACEHOLDER = ["Claude", "Codex"];
 
 export function QuotaMeters() {
   // Live snapshots arrive over WS (quotas.update); the fetch covers the first

@@ -83,8 +83,8 @@ export interface SessionSnapshot {
   readonly inputTokens?: number;
   readonly outputTokens?: number;
   // Current context-window occupancy (size of the latest request prompt) and the
-  // model's max window, for the live context meter. Optional: providers that
-  // expose no token data (e.g. Gemini transcripts) leave these unset.
+  // model's max window, for the live context meter. Optional: providers whose
+  // transcripts expose no token data leave these unset.
   readonly contextTokens?: number;
   readonly contextWindow?: number;
   // Number of subagent transcripts observed for this session (live tailer).

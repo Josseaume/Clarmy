@@ -4,7 +4,7 @@ import { TILE, key, type Desk, type Spot } from "./types";
 // AI Headquarters: FOUR self-contained provider bases, one per quadrant, split
 // by central aisles. No shared desks — each provider spawns, works and idles
 // only inside its own base, so nobody encroaches on another's territory.
-// Grok = gothic (NW), Claude = library (NE), Gemini = knight hall (SW),
+// Grok = gothic (NW), Claude = library (NE), OpenCode = grand salon (SW),
 // Codex/Copilot = spectator lounge (SE).
 
 export const COLS = 40;
@@ -31,13 +31,13 @@ function pod(cols: readonly number[], rows: readonly number[], start: number): D
   return out;
 }
 
-// Only the four themed bases have desks. Providers without a base (e.g. opencode)
-// fall back to the shared DESKS pool + claude visuals at the call sites, so this
-// stays Partial rather than inventing a fifth quadrant.
+// Only the four themed bases have desks. Providers without a base fall back to
+// the shared DESKS pool + claude visuals at the call sites, so this stays
+// Partial rather than inventing a fifth quadrant.
 export const DESKS_BY_PROVIDER: Partial<Record<ProviderId, Desk[]>> = {
   grok: pod([4, 9, 14], [4, 7], 0),
   claude: pod([24, 29, 34], [4, 7], 100),
-  gemini: pod([4, 9, 14], [15, 18], 200),
+  opencode: pod([4, 9, 14], [15, 18], 200),
   codex: pod([24, 29, 34], [15, 18], 300),
 };
 
@@ -47,7 +47,7 @@ export const DESKS: Desk[] = Object.values(DESKS_BY_PROVIDER).flat();
 export const IDLE_SPOTS: Partial<Record<ProviderId, Spot[]>> = {
   grok: [{ col: 4, row: 10, face: "down" }, { col: 9, row: 10, face: "down" }, { col: 14, row: 10, face: "down" }],
   claude: [{ col: 24, row: 10, face: "down" }, { col: 29, row: 10, face: "down" }, { col: 34, row: 10, face: "down" }],
-  gemini: [{ col: 4, row: 21, face: "down" }, { col: 9, row: 21, face: "down" }, { col: 14, row: 21, face: "down" }],
+  opencode: [{ col: 4, row: 21, face: "down" }, { col: 9, row: 21, face: "down" }, { col: 14, row: 21, face: "down" }],
   codex: [{ col: 24, row: 21, face: "down" }, { col: 29, row: 21, face: "down" }, { col: 34, row: 21, face: "down" }],
 };
 
@@ -55,7 +55,7 @@ export const IDLE_SPOTS: Partial<Record<ProviderId, Spot[]>> = {
 export const SPAWN_BY_PROVIDER: Partial<Record<ProviderId, Spot>> = {
   grok: { col: 9, row: 10, face: "down" },
   claude: { col: 29, row: 10, face: "down" },
-  gemini: { col: 9, row: 13, face: "down" },
+  opencode: { col: 9, row: 13, face: "down" },
   codex: { col: 29, row: 13, face: "down" },
 };
 
@@ -69,7 +69,7 @@ export interface ZoneLabel {
 export const ZONE_LABELS: readonly ZoneLabel[] = [
   { text: "NÉCROPOLIS", col: 2, row: 1, color: "#9B7CFF" },
   { text: "BIBLIOTHÈQUE", col: 30, row: 1, color: "#D97757" },
-  { text: "GRAND SALON", col: 2, row: 12, color: "#4796E3" },
+  { text: "GRAND SALON", col: 2, row: 12, color: "#E8B339" },
   { text: "ZONE DÉGOUT", col: 30, row: 12, color: "#10A37F" },
 ];
 
@@ -94,7 +94,7 @@ export const DECOR: Decor[] = [
   { frame: "CLOCK", col: 36, row: 2, block: true, tall: true },
   { frame: "LIBRARY_LAMP", col: 37, row: 5, block: true, tall: true },
 
-  // ── Gemini knight base (SW) ──
+  // ── OpenCode base (SW) — knight decor kept as neutral set dressing ──
   { frame: "STONE_FLOOR", col: 8, row: 16, floor: true },
   { frame: "STONE_FLOOR", col: 9, row: 16, floor: true },
   { frame: "KNIGHT_BANNER", col: 2, row: 13, block: true, tall: true },

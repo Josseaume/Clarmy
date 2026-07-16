@@ -16,7 +16,7 @@ interface Props {
   onModel: (m: string) => void;
 }
 
-// Provider-aware model selector. Small static catalogs (claude/codex/gemini/grok)
+// Provider-aware model selector. Small static catalogs (claude/codex/grok)
 // render as segmented buttons. opencode routes to a large, dynamic, plan-dependent
 // list, so it gets a search-filtered combobox fed by /api/providers/opencode/models.
 export function ModelPicker({ provider, model, onModel }: Props) {
